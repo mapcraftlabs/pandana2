@@ -4,7 +4,9 @@ import pandas as pd
 import shapely
 
 
-def nodes_and_edges(graph: nx.DiGraph, max_weight: float, weight_col: str = "length") -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
+def nodes_and_edges(
+    graph: nx.DiGraph, max_weight: float, weight_col: str = "length"
+) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
     """
     Given a graph, return a DataFrame of weights for all combinations of nodes within max_weight of
         each other.
