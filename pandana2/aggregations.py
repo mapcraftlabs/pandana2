@@ -19,7 +19,9 @@ def nearest_nodes(values_gdf: gpd.GeoDataFrame, nodes_gdf: gpd.GeoDataFrame):
 
 
 def linear_decay_aggregation(max_distance: float, value_col: str, aggregation: str):
-    return lambda x: (x[value_col] * x["weight"] / max_distance).agg(aggregation)
+    return (
+        lambda x: (x[value_col] * x["weight"] / max_distance).agg(aggregation).round(3)
+    )
 
 
 def aggregate(

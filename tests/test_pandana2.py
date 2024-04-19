@@ -1,16 +1,80 @@
+import networkx
 import osmnx
+import pytest
+
+import pandas as pd
 
 from pandana2 import network, aggregations
 
 
+@pytest.fixture
+def simple_graph():
+    """
+    From https://networkx.org/documentation/stable/auto_examples/drawing/plot_weighted_graph.html
+    :return:
+    """
+    G = networkx.Graph()
+
+    G.add_edge("a", "b", weight=0.6)
+    G.add_edge("a", "c", weight=0.2)
+    G.add_edge("c", "d", weight=0.1)
+    G.add_edge("c", "e", weight=0.7)
+    G.add_edge("c", "f", weight=0.9)
+    G.add_edge("a", "d", weight=0.3)
+    return G
+
+
 # TODO full-scale test?  does it work for whole Bay Area?
+def test_basic_edges(simple_graph):
+    edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    assert edges.to_dict(orient="records") == [
+        {"from": "a", "to": "c", "weight": 0.2},
+        {"from": "a", "to": "d", "weight": 0.3},
+        {"from": "a", "to": "b", "weight": 0.6},
+        {"from": "a", "to": "e", "weight": 0.9},
+        {"from": "a", "to": "f", "weight": 1.1},
+        {"from": "b", "to": "a", "weight": 0.6},
+        {"from": "b", "to": "c", "weight": 0.8},
+        {"from": "b", "to": "d", "weight": 0.9},
+        {"from": "c", "to": "d", "weight": 0.1},
+        {"from": "c", "to": "a", "weight": 0.2},
+        {"from": "c", "to": "e", "weight": 0.7},
+        {"from": "c", "to": "b", "weight": 0.8},
+        {"from": "c", "to": "f", "weight": 0.9},
+        {"from": "d", "to": "c", "weight": 0.1},
+        {"from": "d", "to": "a", "weight": 0.3},
+        {"from": "d", "to": "e", "weight": 0.8},
+        {"from": "d", "to": "b", "weight": 0.9},
+        {"from": "d", "to": "f", "weight": 1.0},
+        {"from": "e", "to": "c", "weight": 0.7},
+        {"from": "e", "to": "d", "weight": 0.8},
+        {"from": "e", "to": "a", "weight": 0.9},
+        {"from": "f", "to": "c", "weight": 0.9},
+        {"from": "f", "to": "d", "weight": 1.0},
+        {"from": "f", "to": "a", "weight": 1.1},
+    ]
+
+
+def test_basic_aggregation(simple_graph):
+    edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    group_func = aggregations.linear_decay_aggregation(1, "value", "sum")
+    values_df = pd.DataFrame({"value": [1, 4, 5]}, index=["b", "d", "c"])
+    aggregations_series = aggregations.aggregate(values_df, edges, group_func)
+    print(aggregations_series)
+    assert aggregations_series.to_dict() == {
+        "a": 2.8,
+        "b": 7.6,
+        "c": 1.2,
+        "d": 1.4,
+        "e": 6.7,
+        "f": 8.5,
+    }
 
 
 def get_amenity_as_dataframe(place_query: str, amenity: str):
-    restaurants = osmnx.features_from_place(
-        place_query, {"amenity": amenity}
-    ).reset_index()
-    restaurants = restaurants[restaurants.element_type == "node"][["name", "geometry"]]
+    restaurants = osmnx.features_from_place(place_query, {"amenity": amenity})
+    restaurants = restaurants.reset_index()[restaurants.element_type == "node"]
+    restaurants = restaurants[["name", "geometry"]]
     restaurants["count"] = 1
     return restaurants
 
