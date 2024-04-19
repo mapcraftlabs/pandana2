@@ -1,5 +1,6 @@
 import geopandas as gpd
 import pandas as pd
+from typing import Callable
 
 
 def nearest_nodes(values_gdf: gpd.GeoDataFrame, nodes_gdf: gpd.GeoDataFrame):
@@ -17,21 +18,17 @@ def nearest_nodes(values_gdf: gpd.GeoDataFrame, nodes_gdf: gpd.GeoDataFrame):
     )
 
 
+def linear_decay_aggregation(max_distance: float, value_col: str, aggregation: str):
+    return lambda x: (x[value_col] * x["weight"] / max_distance).agg(aggregation)
+
+
 def aggregate(
     values_df: pd.DataFrame,
     edges_df: pd.DataFrame,
-    max_distance: float,
-    value_col="value",
-    aggregation="sum",
-    decay="linear",
-    # TODO how to pass custom aggregation?
-):
-    group_funcs = {
-        ("sum", "linear"): lambda x: (x[value_col] * x["weight"] / max_distance).sum()
-    }
+    group_func: Callable[[pd.DataFrame], float],
+) -> pd.Series:
     return (
-        edges_df[edges_df.weight <= max_distance]
-        .merge(values_df[[value_col]], how="inner", left_on="to", right_index=True)
+        edges_df.merge(values_df, how="inner", left_on="to", right_index=True)
         .groupby("from")
-        .apply(group_funcs[(aggregation, decay)], include_groups=False)
+        .apply(group_func, include_groups=False)
     )
