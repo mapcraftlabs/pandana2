@@ -10,10 +10,10 @@ def nearest_nodes(values_gdf: gpd.GeoDataFrame, nodes_gdf: gpd.GeoDataFrame):
     :return:
     """
     return (
-        nodes_gdf.to_crs(epsg=3857)
-        .sjoin_nearest(values_gdf.to_crs(epsg=3857))
-        .rename(columns={"index_right": "osm_id"})
-        .set_index("osm_id")
+        values_gdf.to_crs(epsg=3857)
+        .sjoin_nearest(nodes_gdf.to_crs(epsg=3857))
+        .rename(columns={"index_right": "node_id"})
+        .set_index("node_id")
     )
 
 
@@ -24,9 +24,10 @@ def aggregate(
     value_col="value",
     aggregation="sum",
     decay="linear",
+    # TODO how to pass custom aggregation?
 ):
     group_funcs = {
-        ("sum", "linear"): lambda x: (x["value"] * x["weight"] / max_distance).sum()
+        ("sum", "linear"): lambda x: (x[value_col] * x["weight"] / max_distance).sum()
     }
     return (
         edges_df[edges_df.weight <= max_distance]
