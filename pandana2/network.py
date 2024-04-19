@@ -28,7 +28,6 @@ def make_edges(
                 graph, cutoff=max_weight, weight=weight_col
             )
             for to_node_id, weight in to_dict.items()
-            if from_node_id != to_node_id
         ],
     )
 
