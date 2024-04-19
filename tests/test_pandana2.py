@@ -23,3 +23,4 @@ def test_workflow():
     print(aggregations_df)
 
     # TODO if you don't visualize it, it's not real
+    # TODO setup.py, test workflow, gitignore, imports are all red
