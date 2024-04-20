@@ -22,7 +22,6 @@ def simple_graph():
     return G
 
 
-# TODO full-scale test?  does it work for whole Bay Area?
 def test_basic_edges(simple_graph):
     edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
     assert edges.to_dict(orient="records") == [
@@ -98,6 +97,3 @@ def test_workflow():
     assert aggregations_series.index.isin(nodes.index).all()
     assert aggregations_series.min() >= 0
     assert aggregations_series.max() <= 8
-
-    # TODO if you don't visualize it, it's not real
-    # TODO setup.py, test workflow, gitignore, imports are all red
