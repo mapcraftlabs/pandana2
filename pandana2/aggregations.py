@@ -18,13 +18,23 @@ def nearest_nodes(values_gdf: gpd.GeoDataFrame, nodes_gdf: gpd.GeoDataFrame):
     )
 
 
-def linear_decay_aggregation(max_distance: float, value_col: str, aggregation: str):
+def linear_decay_aggregation(
+    max_distance: float, value_col: str, aggregation: str, weight_col="weight"
+):
     return (
         lambda x: (
-            x[value_col] * (max_distance - x["weight"]).clip(lower=0) / max_distance
+            x[value_col] * (max_distance - x[weight_col]).clip(lower=0) / max_distance
         )
         .agg(aggregation)
         .round(3)
+    )
+
+
+def no_decay_aggregation(
+    max_distance: float, value_col: str, aggregation: str, weight_col="weight"
+):
+    return (
+        lambda x: x[x[weight_col] <= max_distance][value_col].agg(aggregation).round(3)
     )
 
 

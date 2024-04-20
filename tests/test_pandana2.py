@@ -58,7 +58,7 @@ def test_basic_edges(simple_graph):
     ]
 
 
-def test_basic_aggregation(simple_graph):
+def test_linear_aggregation(simple_graph):
     edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
     group_func = aggregations.linear_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
@@ -68,6 +68,21 @@ def test_basic_aggregation(simple_graph):
         "b": 1,
         "c": 3 + 2 * 0.4 / 0.5,
         "d": 2 + 3 * 0.4 / 0.5,
+        "e": 0,
+        "f": 0,
+    }
+
+
+def test_flat_aggregation(simple_graph):
+    edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    group_func = aggregations.no_decay_aggregation(0.5, "value", "sum")
+    values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
+    aggregations_series = aggregations.aggregate(values_df, edges, group_func)
+    assert aggregations_series.to_dict() == {
+        "a": 5,
+        "b": 1,
+        "c": 5,
+        "d": 5,
         "e": 0,
         "f": 0,
     }
