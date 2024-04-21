@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from pandana2 import network, aggregations
+import pandana2
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def simple_graph():
 
 
 def test_basic_edges(simple_graph):
-    edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    edges = pandana2.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
     assert edges.to_dict(orient="records") == [
         {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},
@@ -59,10 +59,10 @@ def test_basic_edges(simple_graph):
 
 
 def test_linear_aggregation(simple_graph):
-    edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
-    group_func = aggregations.linear_decay_aggregation(0.5, "value", "sum")
+    edges = pandana2.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    group_func = pandana2.linear_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
-    aggregations_series = aggregations.aggregate(values_df, edges, group_func)
+    aggregations_series = pandana2.aggregate(values_df, edges, group_func)
     assert aggregations_series.to_dict() == {
         "a": round(2 * 0.2 / 0.5 + 3 * 0.3 / 0.5, 2),
         "b": 1,
@@ -74,10 +74,10 @@ def test_linear_aggregation(simple_graph):
 
 
 def test_flat_aggregation(simple_graph):
-    edges = network.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
-    group_func = aggregations.no_decay_aggregation(0.5, "value", "sum")
+    edges = pandana2.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    group_func = pandana2.no_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
-    aggregations_series = aggregations.aggregate(values_df, edges, group_func)
+    aggregations_series = pandana2.aggregate(values_df, edges, group_func)
     assert aggregations_series.to_dict() == {
         "a": 5,
         "b": 1,
@@ -100,15 +100,15 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
 def test_workflow():
     place_query = "Orinda, CA"
     g = osmnx.graph_from_place(place_query)
-    edges = network.make_edges(g, 500)
-    nodes = network.make_nodes(g)
+    edges = pandana2.make_edges(g, 500)
+    nodes = pandana2.make_nodes(g)
 
     restaurants_df = get_amenity_as_dataframe(place_query, "restaurant")
-    restaurants_df = aggregations.nearest_nodes(restaurants_df, nodes)
+    restaurants_df = pandana2.nearest_nodes(restaurants_df, nodes)
     assert restaurants_df.index.isin(nodes.index).all()
 
-    group_func = aggregations.linear_decay_aggregation(500, "count", "sum")
-    aggregations_series = aggregations.aggregate(restaurants_df, edges, group_func)
+    group_func = pandana2.linear_decay_aggregation(500, "count", "sum")
+    aggregations_series = pandana2.aggregate(restaurants_df, edges, group_func)
     assert aggregations_series.index.isin(nodes.index).all()
     assert aggregations_series.min() >= 0
     assert aggregations_series.max() <= 8
