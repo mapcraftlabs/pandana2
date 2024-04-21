@@ -5,7 +5,7 @@ import shapely
 
 
 def make_edges(
-    graph: nx.DiGraph, max_weight: float, weight_col: str = "length"
+    graph: nx.Graph, max_weight: float, weight_col: str = "length"
 ) -> pd.DataFrame:
     """
     Return a DataFrame of weights (or distances) for all combinations of nodes within max_weight of
@@ -32,7 +32,7 @@ def make_edges(
     )
 
 
-def make_nodes(graph: nx.DiGraph, x_col="x", y_col="y", crs=4326) -> gpd.GeoDataFrame:
+def make_nodes(graph: nx.Graph, x_col="x", y_col="y", crs=4326) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(
         geometry=[
             shapely.Point(graph.nodes[node][x_col], graph.nodes[node][y_col])

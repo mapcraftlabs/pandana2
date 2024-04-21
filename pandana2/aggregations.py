@@ -42,7 +42,7 @@ def aggregate(
     values_df: pd.DataFrame,
     edges_df: pd.DataFrame,
     group_func: Callable[[pd.DataFrame], float],
-) -> pd.Series:
+) -> pd.DataFrame:
     return (
         edges_df.merge(values_df, how="inner", left_on="to", right_index=True)
         .groupby("from")
