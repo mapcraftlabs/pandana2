@@ -1,6 +1,1 @@
-networkx~=3.3
-osmnx~=1.9.2
-pytest~=8.1.1
-pandas~=2.2.2
-geopandas~=0.14.3
-shapely~=2.0.4
+pytest>=8.1.1
