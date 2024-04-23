@@ -23,13 +23,12 @@ def dijkstra(
             # we require from_nodes to be sorted
             assert from_nodes[i] >= from_nodes[i - 1], "from_nodes must be sorted"
         if from_nodes[i] not in indexes:
-            # we assume from_nodes is sorted
             # indexes[node_id] holds the first array index that from_node is seen in from_nodes
             indexes[from_nodes[i]] = i
 
     # q is the heapq instance
     # seen is a set of which nodes we've seen so far
-    # min_weight is a dict where keys are node ids and values are the minimum weights we've seen so far
+    # min_weight is a dict where keys are node ids and values are the minimum costs we've seen so far
     q, seen, min_costs = [(0.0, source)], set(), {source: 0.0}
     while q:
         (current_cost, from_node) = heappop(q)
