@@ -1,4 +1,3 @@
-from collections import defaultdict
 from heapq import heappop, heappush
 import numpy as np
 import pandas as pd
@@ -26,9 +25,7 @@ def dijkstra(
     # min_weight is a dict where keys are node ids and values are the minimum weights we've seen so far
     q, seen, min_weights = [(0, source)], set(), {source: 0}
     while q:
-        print(q)
         (current_cost, from_node) = heappop(q)
-        print(from_node, current_cost)
         if from_node in seen:
             continue
 
@@ -43,7 +40,6 @@ def dijkstra(
         while ind < len(from_nodes) and from_nodes[ind] == from_node:
             to_node, cost = to_nodes[ind], edge_weights[ind]
             ind += 1
-            print("  ", from_node, to_node, cost)
             if to_node in seen:
                 continue
             prev_weight = min_weights.get(to_node, None)
