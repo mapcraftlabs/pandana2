@@ -31,7 +31,7 @@ def dijkstra(
     # min_weight is a dict where keys are node ids and values are the minimum costs we've seen so far
     q, seen, min_costs = [(0.0, source)], set(), {source: 0.0}
     while q:
-        (current_cost, from_node) = heappop(q)
+        current_cost, from_node = heappop(q)
         if from_node in seen or from_node not in indexes:
             continue
 
