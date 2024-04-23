@@ -29,24 +29,23 @@ def dijkstra(
     q, seen, min_weights = [(0.0, source)], set(), {source: 0.0}
     while q:
         (current_cost, from_node) = heappop(q)
-        if from_node in seen:
+        if from_node in seen or from_node not in indexes:
             continue
 
         seen.add(from_node)
-        if current_cost >= cutoff:
-            return min_weights
-
-        if from_node not in indexes:
-            continue
-
         ind = indexes[from_node]
+
         while ind < len(from_nodes) and from_nodes[ind] == from_node:
             to_node, cost = to_nodes[ind], edge_weights[ind]
             ind += 1
             if to_node in seen:
                 continue
+
             prev_weight = min_weights.get(to_node, None)
             new_weight = current_cost + cost
+            if new_weight > cutoff:
+                continue
+
             if prev_weight is None or new_weight < prev_weight:
                 min_weights[to_node] = new_weight
                 heappush(q, (new_weight, to_node))

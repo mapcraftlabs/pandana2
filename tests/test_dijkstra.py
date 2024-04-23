@@ -23,7 +23,7 @@ def test_dijkstra_basic():
 
     assert dict(
         dijkstra(edges["from"].values, edges["to"].values, edges.weight.values, 1, 15)
-    ) == {1: 0, 2: 7, 4: 5, 5: 14, 6: 11, 3: 15, 7: 22}
+    ) == {1: 0, 2: 7, 4: 5, 5: 14, 6: 11, 3: 15}
     assert dict(
         dijkstra(edges["from"].values, edges["to"].values, edges.weight.values, 6, 15)
     ) == {6: 0, 7: 11}
