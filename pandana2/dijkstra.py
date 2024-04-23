@@ -2,7 +2,8 @@ from heapq import heappop, heappush
 import numba
 from numba.types import int64, float64, DictType
 import numpy as np
-import pandas as pd
+
+# early code (heavily modified) from https://gist.github.com/kachayev/5990802
 
 
 @numba.jit((DictType(int64, float64))(int64[:], int64[:], float64[:], int64, float64))
