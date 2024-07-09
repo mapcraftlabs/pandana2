@@ -1,5 +1,5 @@
 import pandas as pd
-from pandana2 import dijkstra
+from pandana2 import dijkstra_all_pairs
 
 
 def test_dijkstra_basic():
@@ -21,9 +21,8 @@ def test_dijkstra_basic():
     )
     edges["weight"] = edges["weight"].astype("float64")
 
-    assert dict(
-        dijkstra(edges["from"].values, edges["to"].values, edges.weight.values, 1, 15)
-    ) == {1: 0, 2: 7, 4: 5, 5: 14, 6: 11, 3: 15}
-    assert dict(
-        dijkstra(edges["from"].values, edges["to"].values, edges.weight.values, 6, 15)
-    ) == {6: 0, 7: 11}
+    results = dijkstra_all_pairs(
+        edges["from"].values, edges["to"].values, edges.weight.values, 15
+    )
+    assert results[1] == {1: 0, 2: 7, 4: 5, 5: 14, 6: 11, 3: 15}
+    assert results[6] == {6: 0, 7: 11}

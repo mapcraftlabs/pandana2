@@ -98,7 +98,7 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
 
 
 def test_workflow():
-    place_query = "Orinda, CA"
+    place_query = "Oakland, CA"
     graph = osmnx.graph_from_place(place_query)
     nodes, edges = osmnx.graph_to_gdfs(graph)
 
@@ -106,10 +106,15 @@ def test_workflow():
     restaurants_df = pandana2.nearest_nodes(restaurants_df, nodes)
     assert restaurants_df.index.isin(nodes.index).all()
 
-    # agg_func = pandana2.linear_decay_aggregation(500, "count", "sum")
+    agg_func = pandana2.linear_decay_aggregation()
+    import time
+
+    t1 = time.time()
     aggregations_series = pandana2.aggregate(
         restaurants_df["count"], nodes.index, edges, 500
     )
+    time_diff = time.time() - t1
+    print("here", time_diff)
     print(aggregations_series)
     assert aggregations_series.index.isin(nodes.index).all()
     assert aggregations_series.min() >= 0

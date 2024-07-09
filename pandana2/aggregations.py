@@ -4,7 +4,7 @@ from numba.types import float64, int64, ListType, DictType
 import numpy as np
 import pandas as pd
 from typing import Callable, Union
-from pandana2.dijkstra import dijkstra
+from pandana2.dijkstra import dijkstra_all_pairs
 
 
 def no_decay_aggregation(
@@ -34,8 +34,6 @@ def linear_decay_aggregation(
         method.  Linear decay means a value at max_weight will be weighted as zero while a value
         at the origin node is weighted at 1 and a weight halfway to max_weight will be weighted
         as 0.5.
-    :param max_weight: Values beyond max_weight (sum of weight_col in network distance)
-        will not be considered
     :param aggregation_func: The aggregation to use, can be anything which pandas.DataFrame.agg accepts
     :return: A value for the given origin node
     """
@@ -103,9 +101,14 @@ def _aggregate(
     cutoff: float64,
 ):
     ret = np.empty(len(node_ids), dtype="float64")
+    all_min_weights = dijkstra_all_pairs(from_nodes, to_nodes, edge_costs, cutoff)
     for i in range(len(node_ids)):
-        min_weights = dijkstra(from_nodes, to_nodes, edge_costs, node_ids[i], cutoff)
+        from_node_id = node_ids[i]
+        if from_node_id not in all_min_weights:
+            ret[i] = np.nan
+            continue
 
+        min_weights = all_min_weights[from_node_id]
         values, weights = [], []
         for node_id, weight in min_weights.items():
             if node_id in values_dict:
