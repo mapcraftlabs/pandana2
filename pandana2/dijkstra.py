@@ -3,6 +3,7 @@ import numba
 import pandas as pd
 from numba.types import int64, float64, DictType
 import numpy as np
+import time
 
 # early code (heavily modified) from https://gist.github.com/kachayev/5990802
 
@@ -122,11 +123,13 @@ def dijkstra_all_pairs_df(
     to_nodes_col="to",
     edge_costs_col="edge_cost",
 ) -> pd.DataFrame:
+    t0 = time.time()
     all_unique = set(df[from_nodes_col].unique()) | set(df[to_nodes_col].unique())
     node_id_to_index = {k: v for v, k in enumerate(all_unique)}
     index_to_node_id = {v: k for k, v in node_id_to_index.items()}
     df[from_nodes_col] = df[from_nodes_col].map(node_id_to_index)
     df[to_nodes_col] = df[to_nodes_col].map(node_id_to_index)
+    t1 = time.time()
     results = dijkstra_all_pairs(
         df.sort_values(by=[from_nodes_col, to_nodes_col]),
         cutoff,
@@ -134,6 +137,7 @@ def dijkstra_all_pairs_df(
         to_nodes_col=to_nodes_col,
         edge_costs_col=edge_costs_col,
     )
+    print("Finished dijkstra_all_pairs in {:.2f} seconds".format(time.time() - t1))
     ret_df = pd.DataFrame.from_records(
         [
             {"from": from_node, "to": to_node, "min_cost": min_cost}
@@ -146,4 +150,5 @@ def dijkstra_all_pairs_df(
     ret_df.sort_values(by=["from", "min_cost"], inplace=True)
     ret_df.rename(columns={"min_cost": "weight"}, inplace=True)
     ret_df["weight"] = ret_df.weight.round(2)
+    print("Finished dijkstra_all_pairs_df in {:.2f} seconds".format(time.time() - t0))
     return ret_df

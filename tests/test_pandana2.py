@@ -1,5 +1,6 @@
 import osmnx
 import pytest
+import time
 
 import pandas as pd
 
@@ -116,10 +117,13 @@ def test_workflow():
         to_nodes_col="v",
         edge_costs_col="length",
     )
+    print(distances_df)
     distances_df.to_parquet("distances.parquet")
 
     group_func = pandana2.linear_decay_aggregation(500, "count", "sum")
+    t0 = time.time()
     aggregations_series = pandana2.aggregate(restaurants_df, distances_df, group_func)
+    print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
     assert aggregations_series.index.isin(nodes.index).all()
     assert aggregations_series.min() >= 0
     assert aggregations_series.max() <= 8
