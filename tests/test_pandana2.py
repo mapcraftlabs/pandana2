@@ -12,7 +12,7 @@ def simple_graph():
     """
     From https://networkx.org/documentation/stable/auto_examples/drawing/plot_weighted_graph.html
     """
-    return pd.DataFrame.from_records(
+    simple_graph = pd.DataFrame.from_records(
         [
             {"from": "a", "to": "b", "edge_cost": 0.6},
             {"from": "a", "to": "c", "edge_cost": 0.2},
@@ -22,16 +22,12 @@ def simple_graph():
             {"from": "a", "to": "d", "edge_cost": 0.3},
         ]
     )
-
-
-@pytest.fixture
-def simple_graph_with_reverse_as_df(simple_graph):
     simple_graph_reverse = simple_graph.rename(columns={"from": "to", "to": "from"})
     return pd.concat([simple_graph, simple_graph_reverse])
 
 
-def test_basic_edges(simple_graph_with_reverse_as_df):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph_with_reverse_as_df, cutoff=1.2)
+def test_basic_edges(simple_graph):
+    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
     assert edges.to_dict(orient="records") == [
         {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},
@@ -66,8 +62,8 @@ def test_basic_edges(simple_graph_with_reverse_as_df):
     ]
 
 
-def test_linear_aggregation(simple_graph_with_reverse_as_df):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph_with_reverse_as_df, cutoff=1.2)
+def test_linear_aggregation(simple_graph):
+    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
     group_func = pandana2.linear_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
     aggregations_series = pandana2.aggregate(values_df, edges, group_func)
@@ -81,8 +77,8 @@ def test_linear_aggregation(simple_graph_with_reverse_as_df):
     }
 
 
-def test_flat_aggregation(simple_graph_with_reverse_as_df):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph_with_reverse_as_df, cutoff=1.2)
+def test_flat_aggregation(simple_graph):
+    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
     group_func = pandana2.no_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
     aggregations_series = pandana2.aggregate(values_df, edges, group_func)
