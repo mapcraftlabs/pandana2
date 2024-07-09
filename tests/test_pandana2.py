@@ -25,35 +25,31 @@ def simple_graph():
 
 
 def test_basic_edges(simple_graph):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
+    simple_graph_reverse = simple_graph.rename(columns={"from": "to", "to": "from"})
+    simple_graph_both = pd.concat([simple_graph, simple_graph_reverse])
+    edges = pandana2.dijkstra_all_pairs_df(simple_graph_both, cutoff=1.2)
     assert edges.to_dict(orient="records") == [
-        {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},
         {"from": "a", "to": "d", "weight": 0.3},
         {"from": "a", "to": "b", "weight": 0.6},
         {"from": "a", "to": "e", "weight": 0.9},
         {"from": "a", "to": "f", "weight": 1.1},
-        {"from": "b", "to": "b", "weight": 0.0},
         {"from": "b", "to": "a", "weight": 0.6},
         {"from": "b", "to": "c", "weight": 0.8},
         {"from": "b", "to": "d", "weight": 0.9},
-        {"from": "c", "to": "c", "weight": 0.0},
         {"from": "c", "to": "d", "weight": 0.1},
         {"from": "c", "to": "a", "weight": 0.2},
         {"from": "c", "to": "e", "weight": 0.7},
         {"from": "c", "to": "b", "weight": 0.8},
         {"from": "c", "to": "f", "weight": 0.9},
-        {"from": "d", "to": "d", "weight": 0.0},
         {"from": "d", "to": "c", "weight": 0.1},
         {"from": "d", "to": "a", "weight": 0.3},
         {"from": "d", "to": "e", "weight": 0.8},
         {"from": "d", "to": "b", "weight": 0.9},
         {"from": "d", "to": "f", "weight": 1.0},
-        {"from": "e", "to": "e", "weight": 0.0},
         {"from": "e", "to": "c", "weight": 0.7},
         {"from": "e", "to": "d", "weight": 0.8},
         {"from": "e", "to": "a", "weight": 0.9},
-        {"from": "f", "to": "f", "weight": 0.0},
         {"from": "f", "to": "c", "weight": 0.9},
         {"from": "f", "to": "d", "weight": 1.0},
         {"from": "f", "to": "a", "weight": 1.1},

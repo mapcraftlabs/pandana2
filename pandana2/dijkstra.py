@@ -122,18 +122,28 @@ def dijkstra_all_pairs_df(
     to_nodes_col="to",
     edge_costs_col="edge_cost",
 ) -> pd.DataFrame:
-    # TODO factorize from/to node columns
+    all_unique = set(df[from_nodes_col].unique()) | set(df[to_nodes_col].unique())
+    node_id_to_index = {k: v for v, k in enumerate(all_unique)}
+    index_to_node_id = {v: k for k, v in node_id_to_index.items()}
+    df[from_nodes_col] = df[from_nodes_col].map(node_id_to_index)
+    df[to_nodes_col] = df[to_nodes_col].map(node_id_to_index)
     results = dijkstra_all_pairs(
-        df,
+        df.sort_values(by=[from_nodes_col, to_nodes_col]),
         cutoff,
         from_nodes_col=from_nodes_col,
         to_nodes_col=to_nodes_col,
         edge_costs_col=edge_costs_col,
     )
-    return pd.DataFrame.from_records(
+    ret_df = pd.DataFrame.from_records(
         [
             {"from": from_node, "to": to_node, "min_cost": min_cost}
             for from_node, min_costs in results.items()
             for to_node, min_cost in min_costs.items()
         ]
     )
+    ret_df["from"] = ret_df["from"].map(index_to_node_id)
+    ret_df["to"] = ret_df["to"].map(index_to_node_id)
+    ret_df.sort_values(by=["from", "min_cost"], inplace=True)
+    ret_df.rename(columns={"min_cost": "weight"}, inplace=True)
+    ret_df["weight"] = ret_df.weight.round(2)
+    return ret_df[ret_df.weight > 0]
