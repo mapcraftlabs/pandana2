@@ -1,4 +1,3 @@
-import networkx
 import osmnx
 import pytest
 
@@ -110,16 +109,16 @@ def test_workflow():
     restaurants_df = pandana2.nearest_nodes(restaurants_df, nodes)
     assert restaurants_df.index.isin(nodes.index).all()
 
-    agg_func = pandana2.linear_decay_aggregation()
-    import time
-
-    t1 = time.time()
-    aggregations_series = pandana2.aggregate(
-        restaurants_df["count"], nodes.index, edges, 500, agg_func
+    edges = pandana2.dijkstra_all_pairs_df(
+        edges.reset_index(),
+        cutoff=500,
+        from_nodes_col="u",
+        to_nodes_col="v",
+        edge_costs_col="length",
     )
-    time_diff = time.time() - t1
-    print("here", time_diff)
-    print(aggregations_series)
+
+    group_func = pandana2.linear_decay_aggregation(500, "count", "sum")
+    aggregations_series = pandana2.aggregate(restaurants_df, edges, group_func)
     assert aggregations_series.index.isin(nodes.index).all()
     assert aggregations_series.min() >= 0
     assert aggregations_series.max() <= 8
