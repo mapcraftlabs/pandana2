@@ -146,4 +146,4 @@ def dijkstra_all_pairs_df(
     ret_df.sort_values(by=["from", "min_cost"], inplace=True)
     ret_df.rename(columns={"min_cost": "weight"}, inplace=True)
     ret_df["weight"] = ret_df.weight.round(2)
-    return ret_df[ret_df.weight > 0]
+    return ret_df
