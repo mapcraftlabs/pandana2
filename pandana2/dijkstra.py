@@ -1,5 +1,6 @@
 from heapq import heappop, heappush
 import numba
+import pandas as pd
 from numba.types import int64, float64, DictType
 import numpy as np
 
@@ -20,10 +21,13 @@ def _dijkstra(
     from_nodes: np.array,  # node ids (ints)
     to_nodes: np.array,  # node ids (ints)
     edge_costs: np.array,  # weights (floats)
-    source: int,  # source node (str for now, will be int)
+    source: int,  # source node
     cutoff: float,  # cutoff weight (float)
-    indexes: DictType(int64, int64),  # first
+    indexes: DictType(int64, int64),  # first occurrence of each node_id in from_nodes
 ):
+    """
+    Internal function should not be called except by dijkstra_all_pairs
+    """
     # q is the heapq instance
     # seen is a set of which nodes we've seen so far
     # min_weight is a dict where keys are node ids and values are the minimum costs we've seen so far
@@ -57,17 +61,22 @@ def _dijkstra(
 @numba.jit(
     (DictType(int64, DictType(int64, float64)))(int64[:], int64[:], float64[:], float64)
 )
-def dijkstra_all_pairs(
+def _dijkstra_all_pairs(
     from_nodes: np.array,  # node ids (ints)
     to_nodes: np.array,  # node ids (ints)
     edge_costs: np.array,  # weights (floats)
     cutoff: float,  # cutoff weight (float)
 ):
+    """
+    Run dijkstra for every node in from_nodes
+    """
     assert (
         len(from_nodes) == len(to_nodes) == len(edge_costs)
     ), "from_nodes, to_nodes, and edge_weights must be same length"
-    indexes = DictType.empty(int64, int64)
+
+    indexes = DictType.empty(key_type=int64, value_type=int64)
     for i in range(len(from_nodes)):
+        assert edge_costs[i] > 0, "Edge costs cannot be negative"
         if i > 1:
             # we require from_nodes to be sorted
             assert from_nodes[i] >= from_nodes[i - 1], "from_nodes must be sorted"
@@ -75,7 +84,9 @@ def dijkstra_all_pairs(
             # indexes[node_id] holds the first array index that from_node is seen in from_nodes
             indexes[from_nodes[i]] = i
 
-    results = DictType.empty(int64, DictType.empty(int64, float64))
+    results = DictType.empty(
+        key_type=int64, value_type=DictType.empty(key_type=int64, value_type=float64)
+    )
 
     for from_node in indexes.keys():
         results[from_node] = _dijkstra(
@@ -83,3 +94,22 @@ def dijkstra_all_pairs(
         )
 
     return results
+
+
+def dijkstra_all_pairs(
+    df: pd.DataFrame,
+    cutoff: float,  # cutoff weight (float)
+    from_nodes_col="from",
+    to_nodes_col="to",
+    edge_costs_col="edge_costs",
+):
+    """
+    Same as above, but pass in a DataFrame
+    Should have from_nodes_col, to_nodes_col, and edge_costs_col as columns
+    """
+    return _dijkstra_all_pairs(
+        df[from_nodes_col].values,
+        df[to_nodes_col].values,
+        df[edge_costs_col].astype("float").values,
+        cutoff,
+    )

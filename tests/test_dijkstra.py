@@ -17,12 +17,9 @@ def test_dijkstra_basic():
             (5, 7, 9),
             (6, 7, 11),
         ],
-        columns=["from", "to", "weight"],
+        columns=["from", "to", "edge_costs"],
     )
-    edges["weight"] = edges["weight"].astype("float64")
 
-    results = dijkstra_all_pairs(
-        edges["from"].values, edges["to"].values, edges.weight.values, 15
-    )
+    results = dijkstra_all_pairs(edges, 15)
     assert results[1] == {1: 0, 2: 7, 4: 5, 5: 14, 6: 11, 3: 15}
     assert results[6] == {6: 0, 7: 11}

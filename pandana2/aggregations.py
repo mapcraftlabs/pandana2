@@ -3,8 +3,8 @@ from numba.typed import Dict, List
 from numba.types import float64, int64, ListType, DictType
 import numpy as np
 import pandas as pd
-from typing import Callable, Union
-from pandana2.dijkstra import dijkstra_all_pairs
+from typing import Union
+from pandana2.dijkstra import _dijkstra_all_pairs
 
 
 def no_decay_aggregation(
@@ -108,7 +108,7 @@ def _aggregate(
     agg_func: float64(float64[:], float64[:], float64),
 ):
     ret = np.empty(len(node_ids), dtype="float64")
-    all_min_weights = dijkstra_all_pairs(from_nodes, to_nodes, edge_costs, cutoff)
+    all_min_weights = _dijkstra_all_pairs(from_nodes, to_nodes, edge_costs, cutoff)
     for i in range(len(node_ids)):
         from_node_id = node_ids[i]
         if from_node_id not in all_min_weights:
