@@ -98,7 +98,7 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
 
 
 def test_workflow():
-    place_query = "Oakland, CA"
+    place_query = "Orinda, CA"
     graph = osmnx.graph_from_place(place_query)
     nodes, edges = osmnx.graph_to_gdfs(graph)
 
@@ -111,7 +111,7 @@ def test_workflow():
 
     t1 = time.time()
     aggregations_series = pandana2.aggregate(
-        restaurants_df["count"], nodes.index, edges, 500
+        restaurants_df["count"], nodes.index, edges, 500, agg_func
     )
     time_diff = time.time() - t1
     print("here", time_diff)

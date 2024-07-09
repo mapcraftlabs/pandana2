@@ -37,9 +37,12 @@ def linear_decay_aggregation(
     :param aggregation_func: The aggregation to use, can be anything which pandas.DataFrame.agg accepts
     :return: A value for the given origin node
     """
-    return lambda values, weights, cutoff: (
-        aggregation_func(values * (cutoff - weights).clip(lower=0) / cutoff)
-    )
+
+    @numba.jit(float64(float64[:], float64[:], float64))
+    def func(values, weights, cutoff):
+        return aggregation_func(values * np.clip(cutoff - weights, 0, None) / cutoff)
+
+    return func
 
 
 def aggregate(
@@ -47,6 +50,7 @@ def aggregate(
     all_nodes_ids: pd.Index,
     edges_df: pd.DataFrame,
     cutoff: float,
+    agg_func,
 ) -> Union[pd.Series, pd.DataFrame]:
     """
     Given a values_df which is indexed by node_id and an edges_df with a weight column,
@@ -77,6 +81,7 @@ def aggregate(
             edges_df["v"].values,
             edges_df["length"].values,
             cutoff,
+            agg_func,
         ),
         index=all_nodes_ids,
     )
@@ -90,6 +95,7 @@ def aggregate(
         int64[:],
         float64[:],
         float64,
+        float64(float64[:], float64[:], float64).as_type(),
     )
 )
 def _aggregate(
@@ -99,6 +105,7 @@ def _aggregate(
     to_nodes: np.array,  # end node_id of edges (ints)
     edge_costs: np.array,  # weights (floats)
     cutoff: float64,
+    agg_func: float64(float64[:], float64[:], float64),
 ):
     ret = np.empty(len(node_ids), dtype="float64")
     all_min_weights = dijkstra_all_pairs(from_nodes, to_nodes, edge_costs, cutoff)
@@ -117,6 +124,5 @@ def _aggregate(
                     weights.append(weight)
         values, weights = np.array(values), np.array(weights)
 
-        # hardcoded aggregation function
-        ret[i] = np.sum(values * np.clip(cutoff - weights, 0, None) / cutoff)
+        ret[i] = agg_func(values, weights, cutoff)
     return ret
