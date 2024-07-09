@@ -12,18 +12,20 @@ def simple_graph():
     """
     From https://networkx.org/documentation/stable/auto_examples/drawing/plot_weighted_graph.html
     """
-    graph = networkx.Graph()
-    graph.add_edge("a", "b", weight=0.6)
-    graph.add_edge("a", "c", weight=0.2)
-    graph.add_edge("c", "d", weight=0.1)
-    graph.add_edge("c", "e", weight=0.7)
-    graph.add_edge("c", "f", weight=0.9)
-    graph.add_edge("a", "d", weight=0.3)
-    return graph
+    return pd.DataFrame.from_records(
+        [
+            {"from": "a", "to": "b", "edge_cost": 0.6},
+            {"from": "a", "to": "c", "edge_cost": 0.2},
+            {"from": "c", "to": "d", "edge_cost": 0.1},
+            {"from": "c", "to": "e", "edge_cost": 0.7},
+            {"from": "c", "to": "f", "edge_cost": 0.9},
+            {"from": "a", "to": "d", "edge_cost": 0.3},
+        ]
+    )
 
 
 def test_basic_edges(simple_graph):
-    edges = pandana2.make_edges(simple_graph, weight_col="weight", max_weight=1.2)
+    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
     assert edges.to_dict(orient="records") == [
         {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},

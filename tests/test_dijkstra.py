@@ -17,7 +17,7 @@ def test_dijkstra_basic():
             (5, 7, 9),
             (6, 7, 11),
         ],
-        columns=["from", "to", "edge_costs"],
+        columns=["from", "to", "edge_cost"],
     )
 
     results = dijkstra_all_pairs(edges, 15)

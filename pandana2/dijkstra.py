@@ -101,8 +101,8 @@ def dijkstra_all_pairs(
     cutoff: float,  # cutoff weight (float)
     from_nodes_col="from",
     to_nodes_col="to",
-    edge_costs_col="edge_costs",
-):
+    edge_costs_col="edge_cost",
+) -> dict[int, dict[int, float]]:
     """
     Same as above, but pass in a DataFrame
     Should have from_nodes_col, to_nodes_col, and edge_costs_col as columns
@@ -112,4 +112,28 @@ def dijkstra_all_pairs(
         df[to_nodes_col].values,
         df[edge_costs_col].astype("float").values,
         cutoff,
+    )
+
+
+def dijkstra_all_pairs_df(
+    df: pd.DataFrame,
+    cutoff: float,  # cutoff weight (float)
+    from_nodes_col="from",
+    to_nodes_col="to",
+    edge_costs_col="edge_cost",
+) -> pd.DataFrame:
+    # TODO factorize from/to node columns
+    results = dijkstra_all_pairs(
+        df,
+        cutoff,
+        from_nodes_col=from_nodes_col,
+        to_nodes_col=to_nodes_col,
+        edge_costs_col=edge_costs_col,
+    )
+    return pd.DataFrame.from_records(
+        [
+            {"from": from_node, "to": to_node, "min_cost": min_cost}
+            for from_node, min_costs in results.items()
+            for to_node, min_cost in min_costs.items()
+        ]
     )

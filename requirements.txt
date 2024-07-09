@@ -1,5 +1,4 @@
 geopandas>=0.13.2
-networkx>=3.2.1
 numba
 osmnx>=1.9.2
 pandas>=2.2.0
