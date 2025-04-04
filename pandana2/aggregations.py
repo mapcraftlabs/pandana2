@@ -19,8 +19,8 @@ def no_decay_aggregation(
     :return: A value for the given origin node
     """
     return (
-        lambda df, group_by_col: df[df[weight_col] <= max_weight]
-        .groupby(group_by_col)[value_col]
+        lambda df, group_by_col: (df[value_col] * (df[weight_col] < max_weight))
+        .groupby(df[group_by_col])
         .agg(aggregation)
         .round(3)
     )

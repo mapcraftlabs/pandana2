@@ -3,7 +3,6 @@ import pytest
 import time
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 
 import pandana2
@@ -29,7 +28,7 @@ def simple_graph():
 
 
 def test_basic_edges(simple_graph):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
+    edges = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
     assert edges.to_dict(orient="records") == [
         {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},
@@ -65,7 +64,7 @@ def test_basic_edges(simple_graph):
 
 
 def test_linear_aggregation(simple_graph):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
+    edges = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
     group_func = pandana2.linear_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
     aggregations_series = pandana2.aggregate(values_df, edges, group_func)
@@ -80,7 +79,7 @@ def test_linear_aggregation(simple_graph):
 
 
 def test_flat_aggregation(simple_graph):
-    edges = pandana2.dijkstra_all_pairs_df(simple_graph, cutoff=1.2)
+    edges = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
     group_func = pandana2.no_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
     aggregations_series = pandana2.aggregate(values_df, edges, group_func)
@@ -163,6 +162,3 @@ def test_workflow():
         legend=True,
     )
     plt.savefig("average price per sqft.png", dpi=150, bbox_inches="tight")
-
-    # why are some nodes missing
-    #

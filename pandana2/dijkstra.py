@@ -121,13 +121,28 @@ def dijkstra_all_pairs(
 ) -> pd.DataFrame:
     """
     Run dijkstra for every node in the edges DataFrame.  Edges should have from, to, and weight
-      columns which can be specified using the optional parameters.  For performance, we assume
-      the input DataFrame has been sorted by from node.
+      columns which can be specified using the optional parameters.
     """
+    all_unique = set(edges_df[from_nodes_col].unique()) | set(
+        edges_df[to_nodes_col].unique()
+    )
+    node_id_to_index = {k: v for v, k in enumerate(all_unique)}
+    index_to_node_id = {v: k for k, v in node_id_to_index.items()}
+    edges_df[from_nodes_col] = edges_df[from_nodes_col].map(node_id_to_index)
+    edges_df[to_nodes_col] = edges_df[to_nodes_col].map(node_id_to_index)
+    edges_df = edges_df.sort_values(by=[from_nodes_col, to_nodes_col])
+
     from_nodes, to_nodes, weight = _dijkstra_all_pairs(
         edges_df[from_nodes_col].values,
         edges_df[to_nodes_col].values,
         edges_df[edge_costs_col].astype("float").values,
         cutoff,
     )
-    return pd.DataFrame({"from": from_nodes, "to": to_nodes, "weight": weight})
+
+    ret_df = pd.DataFrame({"from": from_nodes, "to": to_nodes, "weight": weight})
+    ret_df["from"] = ret_df["from"].map(index_to_node_id)
+    ret_df["to"] = ret_df["to"].map(index_to_node_id)
+    ret_df.sort_values(by=["from", "weight"], inplace=True)
+    ret_df["weight"] = ret_df["weight"].round(2)
+
+    return ret_df
