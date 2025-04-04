@@ -117,7 +117,9 @@ def test_workflow():
     nodes["something"] = np.random.random()
     restaurants_df = pd.read_parquet("restaurants.parquet")
     restaurants_df["count"] = 1
+    print(restaurants_df)
 
+    t0 = time.time()
     distances_df = pandana2.dijkstra_all_pairs(
         edges.reset_index(),
         cutoff=1000,
@@ -125,7 +127,9 @@ def test_workflow():
         to_nodes_col="v",
         edge_costs_col="length",
     )
+    print("Finished dijkstra_all_pairs in {:.2f} seconds".format(time.time() - t0))
     print(distances_df)
+    print(distances_df["from"].value_counts())
     # distances_df.to_parquet("distances.parquet")
 
     group_func = pandana2.no_decay_aggregation(1000, "something", "sum")
