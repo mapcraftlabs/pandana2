@@ -74,6 +74,7 @@ def _dijkstra_all_pairs(
         len(from_nodes) == len(to_nodes) == len(edge_costs)
     ), "from_nodes, to_nodes, and edge_weights must be same length"
 
+    # indexes[node_id] holds the first array index that from_node is seen in from_nodes
     indexes = DictType.empty(key_type=int64, value_type=int64)
     for i in range(len(from_nodes)):
         assert edge_costs[i] > 0, "Edge costs cannot be negative"
@@ -81,22 +82,26 @@ def _dijkstra_all_pairs(
             # we require from_nodes to be sorted
             assert from_nodes[i] >= from_nodes[i - 1], "from_nodes must be sorted"
         if from_nodes[i] not in indexes:
-            # indexes[node_id] holds the first array index that from_node is seen in from_nodes
             indexes[from_nodes[i]] = i
 
+    # results is a dictionary where keys are "from" nodes and values are dictionaries
+    #   the sub-dictionary contains keys which are "to" nodes and the min const between
+    #   from and to
     results = DictType.empty(
         key_type=int64, value_type=DictType.empty(key_type=int64, value_type=float64)
     )
 
-    total_len = 0
     for from_node in indexes.keys():
         results[from_node] = _dijkstra(
             from_nodes, to_nodes, edge_costs, from_node, cutoff, indexes
         )
-        total_len += len(results[from_node])
 
     # from here down we convert from dictionaries to arrays
     # dictionaries are much more expensive to pass back to python
+    total_len = 0
+    for to_node_dict in results.values():
+        total_len += len(to_node_dict)
+
     from_nodes = np.empty(total_len, dtype=np.int64)
     to_nodes = np.empty(total_len, dtype=np.int64)
     weights = np.empty(total_len, dtype=np.float64)
