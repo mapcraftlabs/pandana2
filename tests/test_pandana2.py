@@ -1,9 +1,9 @@
-import osmnx
-import pytest
 import time
 
 import geopandas as gpd
+import osmnx
 import pandas as pd
+import pytest
 
 import pandana2
 

@@ -1,5 +1,6 @@
-import pandas as pd
 from typing import Callable, Union
+
+import pandas as pd
 
 
 def no_decay_aggregation(
