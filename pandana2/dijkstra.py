@@ -120,8 +120,11 @@ def dijkstra_all_pairs(
     edge_costs_col="edge_cost",
 ) -> pd.DataFrame:
     """
-    Run dijkstra for every node in the edges DataFrame.  Edges should have from, to, and weight
-      columns which can be specified using the optional parameters.
+    Run dijkstra for every node in the edges DataFrame.  Edges should have from, to, and edge_cost
+      columns which can be specified using the optional parameters.  The return value will be node
+      from-to connections and the associated weight of the shortest path between them.  Cutoff
+      must be passed to keep the result performant and is the maximum weight to consider between
+      nearby nodes.
     """
     all_unique = set(edges_df[from_nodes_col].unique()) | set(
         edges_df[to_nodes_col].unique()
