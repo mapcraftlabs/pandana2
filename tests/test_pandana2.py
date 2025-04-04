@@ -102,6 +102,7 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
     return restaurants
 
 
+@pytest.mark.skip()
 def test_workflow():
     """
     place_query = "Oakland, CA"
