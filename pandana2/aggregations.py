@@ -19,8 +19,8 @@ def no_decay_aggregation(
     :return: A value for the given origin node
     """
     return (
-        lambda groupby_col, df: df[df[weight_col] <= max_weight]
-        .groupby(groupby_col)[value_col]
+        lambda df, group_by_col: df[df[weight_col] <= max_weight]
+        .groupby(group_by_col)[value_col]
         .agg(aggregation)
         .round(3)
     )
@@ -43,9 +43,10 @@ def linear_decay_aggregation(
     :return: A value for the given origin node
     """
     return (
-        lambda x: (
-            x[value_col] * (max_weight - x[weight_col]).clip(lower=0) / max_weight
+        lambda df, group_by_col: (
+            df[value_col] * (max_weight - df[weight_col]).clip(lower=0) / max_weight
         )
+        .groupby(df[group_by_col])
         .agg(aggregation)
         .round(3)
     )
@@ -54,10 +55,10 @@ def linear_decay_aggregation(
 def aggregate(
     values_df: pd.DataFrame,
     edges_df: pd.DataFrame,
-    group_func: Callable[[pd.DataFrame], float],
+    group_func: Callable[[pd.DataFrame, str], pd.DataFrame],
     origin_node_id_col: str = "from",
     destination_node_id_col: str = "to",
-) -> Union[pd.Series, pd.DataFrame]:
+) -> pd.Series | pd.DataFrame:
     """
     Given a values_df which is indexed by node_id and an edges_df with a weight column,
         merge the edges_df to values_df using the destination node id, group by the
@@ -68,12 +69,10 @@ def aggregate(
         linear_decay_aggregation, but can be customized
     :param destination_node_id_col: a column in edges_df, usually 'to'
     :param origin_node_id_col: a column in edges_df, usually 'from'
-    :return: A series indexes by all the origin node ids in edges_df with values returned
+    :return: A series indexed by all the origin node ids in edges_df with values returned
         by group_func
     """
-    return group_func(
-        origin_node_id_col,
-        edges_df.merge(
-            values_df, how="inner", left_on=destination_node_id_col, right_index=True
-        ),
+    merged_df = edges_df.merge(
+        values_df, how="inner", left_on=destination_node_id_col, right_index=True
     )
+    return group_func(merged_df, origin_node_id_col)

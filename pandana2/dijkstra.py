@@ -95,6 +95,8 @@ def _dijkstra_all_pairs(
         )
         total_len += len(results[from_node])
 
+    # from here down we convert from dictionaries to arrays
+    # dictionaries are much more expensive to pass back to python
     from_nodes = np.empty(total_len, dtype=np.int64)
     to_nodes = np.empty(total_len, dtype=np.int64)
     weights = np.empty(total_len, dtype=np.float64)
@@ -111,20 +113,21 @@ def _dijkstra_all_pairs(
 
 
 def dijkstra_all_pairs(
-    df: pd.DataFrame,
+    edges_df: pd.DataFrame,
     cutoff: float,  # cutoff weight (float)
     from_nodes_col="from",
     to_nodes_col="to",
     edge_costs_col="edge_cost",
 ) -> pd.DataFrame:
     """
-    Same as above, but pass in a DataFrame
-    Should have from_nodes_col, to_nodes_col, and edge_costs_col as columns
+    Run dijkstra for every node in the edges DataFrame.  Edges should have from, to, and weight
+      columns which can be specified using the optional parameters.  For performance, we assume
+      the input DataFrame has been sorted by from node.
     """
     from_nodes, to_nodes, weight = _dijkstra_all_pairs(
-        df[from_nodes_col].values,
-        df[to_nodes_col].values,
-        df[edge_costs_col].astype("float").values,
+        edges_df[from_nodes_col].values,
+        edges_df[to_nodes_col].values,
+        edges_df[edge_costs_col].astype("float").values,
         cutoff,
     )
     return pd.DataFrame({"from": from_nodes, "to": to_nodes, "weight": weight})

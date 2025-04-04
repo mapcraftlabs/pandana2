@@ -2,6 +2,7 @@ import osmnx
 import pytest
 import time
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 
@@ -104,40 +105,64 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
 
 def test_workflow():
     """
-    place_query = "Orinda, CA"
-    graph = osmnx.graph_from_place(place_query)
+    place_query = "Oakland, CA"
+    graph = osmnx.graph_from_place(place_query, network_type="drive")
     nodes, edges = osmnx.graph_to_gdfs(graph)
 
-    restaurants_df = get_amenity_as_dataframe(place_query, "restaurant")
-    restaurants_df = pandana2.nearest_nodes(restaurants_df, nodes)
-    assert restaurants_df.index.isin(nodes.index).all()
+    print(nodes)
+    print(edges)
+
+    nodes[["x", "y"]].to_parquet("nodes.parquet")
+    edges.reset_index(level=2, drop=True)[["length"]].to_parquet("edges.parquet")
     """
     edges = pd.read_parquet("edges.parquet")
     nodes = pd.read_parquet("nodes.parquet")
-    nodes["something"] = np.random.random()
-    restaurants_df = pd.read_parquet("restaurants.parquet")
-    restaurants_df["count"] = 1
-    print(restaurants_df)
+    nodes = gpd.GeoDataFrame(
+        nodes,
+        geometry=gpd.points_from_xy(nodes.x, nodes.y),
+        crs="EPSG:4326",
+    ).drop(columns=["x", "y"])
+
+    redfin_df = pd.read_csv("redfin_2025-04-04-13-35-42.csv")
+    redfin_df = gpd.GeoDataFrame(
+        redfin_df[["$/SQUARE FEET"]],
+        geometry=gpd.points_from_xy(redfin_df.LONGITUDE, redfin_df.LATITUDE),
+        crs="EPSG:4326",
+    )
+
+    redfin_df = pandana2.nearest_nodes(redfin_df, nodes)
+    print(redfin_df)
+    assert redfin_df.index.isin(nodes.index).all()
 
     t0 = time.time()
     distances_df = pandana2.dijkstra_all_pairs(
         edges.reset_index(),
-        cutoff=1000,
+        cutoff=1500,
         from_nodes_col="u",
         to_nodes_col="v",
         edge_costs_col="length",
     )
     print("Finished dijkstra_all_pairs in {:.2f} seconds".format(time.time() - t0))
     print(distances_df)
-    print(distances_df["from"].value_counts())
-    # distances_df.to_parquet("distances.parquet")
 
-    group_func = pandana2.no_decay_aggregation(1000, "something", "sum")
+    group_func = pandana2.no_decay_aggregation(1500, "$/SQUARE FEET", "mean")
     t0 = time.time()
-    aggregations_series = pandana2.aggregate(nodes, distances_df, group_func)
+    nodes["average price/sqft"] = pandana2.aggregate(
+        redfin_df, distances_df, group_func
+    )
     print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
-    print(aggregations_series)
     print(nodes)
-    assert aggregations_series.index.isin(nodes.index).all()
-    # assert aggregations_series.min() >= 0
-    # assert aggregations_series.max() <= 8
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    plt.title("Average Sales Price/SQFT")
+    nodes.plot(
+        column="average price/sqft",
+        markersize=2,
+        ax=ax,
+        legend=True,
+    )
+    plt.savefig("average price per sqft.png", dpi=150, bbox_inches="tight")
+
+    # why are some nodes missing
+    #
