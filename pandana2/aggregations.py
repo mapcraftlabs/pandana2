@@ -18,7 +18,12 @@ def no_decay_aggregation(
     :param weight_col: The column in edges_df to use as the weight column
     :return: A value for the given origin node
     """
-    return lambda x: x[x[weight_col] <= max_weight][value_col].agg(aggregation).round(3)
+    return (
+        lambda groupby_col, df: df[df[weight_col] <= max_weight]
+        .groupby(groupby_col)[value_col]
+        .agg(aggregation)
+        .round(3)
+    )
 
 
 def linear_decay_aggregation(
@@ -66,10 +71,9 @@ def aggregate(
     :return: A series indexes by all the origin node ids in edges_df with values returned
         by group_func
     """
-    return (
+    return group_func(
+        origin_node_id_col,
         edges_df.merge(
             values_df, how="inner", left_on=destination_node_id_col, right_index=True
-        )
-        .groupby(origin_node_id_col)
-        .apply(group_func, include_groups=False)
+        ),
     )

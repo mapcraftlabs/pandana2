@@ -1,9 +1,8 @@
 from heapq import heappop, heappush
 import numba
 import pandas as pd
-from numba.types import int64, float64, DictType
+from numba.types import int64, float64, DictType, Tuple
 import numpy as np
-import time
 
 # early code (heavily modified) from https://gist.github.com/kachayev/5990802
 
@@ -60,7 +59,7 @@ def _dijkstra(
 
 
 @numba.jit(
-    (DictType(int64, DictType(int64, float64)))(int64[:], int64[:], float64[:], float64)
+    Tuple((int64[:], int64[:], float64[:]))(int64[:], int64[:], float64[:], float64)
 )
 def _dijkstra_all_pairs(
     from_nodes: np.array,  # node ids (ints)
@@ -89,12 +88,26 @@ def _dijkstra_all_pairs(
         key_type=int64, value_type=DictType.empty(key_type=int64, value_type=float64)
     )
 
+    total_len = 0
     for from_node in indexes.keys():
         results[from_node] = _dijkstra(
             from_nodes, to_nodes, edge_costs, from_node, cutoff, indexes
         )
+        total_len += len(results[from_node])
 
-    return results
+    from_nodes = np.empty(total_len, dtype=np.int64)
+    to_nodes = np.empty(total_len, dtype=np.int64)
+    weights = np.empty(total_len, dtype=np.float64)
+
+    i = 0
+    for from_node, to_node_dict in results.items():
+        for to_node, weight in to_node_dict.items():
+            from_nodes[i] = from_node
+            to_nodes[i] = to_node
+            weights[i] = weight
+            i += 1
+
+    return from_nodes, to_nodes, weights
 
 
 def dijkstra_all_pairs(
@@ -103,52 +116,15 @@ def dijkstra_all_pairs(
     from_nodes_col="from",
     to_nodes_col="to",
     edge_costs_col="edge_cost",
-) -> dict[int, dict[int, float]]:
+) -> pd.DataFrame:
     """
     Same as above, but pass in a DataFrame
     Should have from_nodes_col, to_nodes_col, and edge_costs_col as columns
     """
-    return _dijkstra_all_pairs(
+    from_nodes, to_nodes, weight = _dijkstra_all_pairs(
         df[from_nodes_col].values,
         df[to_nodes_col].values,
         df[edge_costs_col].astype("float").values,
         cutoff,
     )
-
-
-def dijkstra_all_pairs_df(
-    df: pd.DataFrame,
-    cutoff: float,  # cutoff weight (float)
-    from_nodes_col="from",
-    to_nodes_col="to",
-    edge_costs_col="edge_cost",
-) -> pd.DataFrame:
-    t0 = time.time()
-    all_unique = set(df[from_nodes_col].unique()) | set(df[to_nodes_col].unique())
-    node_id_to_index = {k: v for v, k in enumerate(all_unique)}
-    index_to_node_id = {v: k for k, v in node_id_to_index.items()}
-    df[from_nodes_col] = df[from_nodes_col].map(node_id_to_index)
-    df[to_nodes_col] = df[to_nodes_col].map(node_id_to_index)
-    t1 = time.time()
-    results = dijkstra_all_pairs(
-        df.sort_values(by=[from_nodes_col, to_nodes_col]),
-        cutoff,
-        from_nodes_col=from_nodes_col,
-        to_nodes_col=to_nodes_col,
-        edge_costs_col=edge_costs_col,
-    )
-    print("Finished dijkstra_all_pairs in {:.2f} seconds".format(time.time() - t1))
-    ret_df = pd.DataFrame.from_records(
-        [
-            {"from": from_node, "to": to_node, "min_cost": min_cost}
-            for from_node, min_costs in results.items()
-            for to_node, min_cost in min_costs.items()
-        ]
-    )
-    ret_df["from"] = ret_df["from"].map(index_to_node_id)
-    ret_df["to"] = ret_df["to"].map(index_to_node_id)
-    ret_df.sort_values(by=["from", "min_cost"], inplace=True)
-    ret_df.rename(columns={"min_cost": "weight"}, inplace=True)
-    ret_df["weight"] = ret_df.weight.round(2)
-    print("Finished dijkstra_all_pairs_df in {:.2f} seconds".format(time.time() - t0))
-    return ret_df
+    return pd.DataFrame({"from": from_nodes, "to": to_nodes, "weight": weight})

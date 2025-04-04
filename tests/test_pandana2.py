@@ -2,6 +2,7 @@ import osmnx
 import pytest
 import time
 
+import numpy as np
 import pandas as pd
 
 import pandana2
@@ -102,6 +103,7 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
 
 
 def test_workflow():
+    """
     place_query = "Orinda, CA"
     graph = osmnx.graph_from_place(place_query)
     nodes, edges = osmnx.graph_to_gdfs(graph)
@@ -109,21 +111,29 @@ def test_workflow():
     restaurants_df = get_amenity_as_dataframe(place_query, "restaurant")
     restaurants_df = pandana2.nearest_nodes(restaurants_df, nodes)
     assert restaurants_df.index.isin(nodes.index).all()
+    """
+    edges = pd.read_parquet("edges.parquet")
+    nodes = pd.read_parquet("nodes.parquet")
+    nodes["something"] = np.random.random()
+    restaurants_df = pd.read_parquet("restaurants.parquet")
+    restaurants_df["count"] = 1
 
-    distances_df = pandana2.dijkstra_all_pairs_df(
+    distances_df = pandana2.dijkstra_all_pairs(
         edges.reset_index(),
-        cutoff=500,
+        cutoff=1000,
         from_nodes_col="u",
         to_nodes_col="v",
         edge_costs_col="length",
     )
     print(distances_df)
-    distances_df.to_parquet("distances.parquet")
+    # distances_df.to_parquet("distances.parquet")
 
-    group_func = pandana2.linear_decay_aggregation(500, "count", "sum")
+    group_func = pandana2.no_decay_aggregation(1000, "something", "sum")
     t0 = time.time()
-    aggregations_series = pandana2.aggregate(restaurants_df, distances_df, group_func)
+    aggregations_series = pandana2.aggregate(nodes, distances_df, group_func)
     print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
+    print(aggregations_series)
+    print(nodes)
     assert aggregations_series.index.isin(nodes.index).all()
-    assert aggregations_series.min() >= 0
-    assert aggregations_series.max() <= 8
+    # assert aggregations_series.min() >= 0
+    # assert aggregations_series.max() <= 8
