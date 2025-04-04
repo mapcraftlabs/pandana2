@@ -1,4 +1,3 @@
-import geopandas as gpd
 import pandas as pd
 from typing import Callable, Union
 
@@ -58,7 +57,7 @@ def aggregate(
     group_func: Callable[[pd.DataFrame, str], pd.DataFrame],
     origin_node_id_col: str = "from",
     destination_node_id_col: str = "to",
-) -> pd.Series | pd.DataFrame:
+) -> Union[pd.Series, pd.DataFrame]:
     """
     Given a values_df which is indexed by node_id and an edges_df with a weight column,
         merge the edges_df to values_df using the destination node id, group by the
