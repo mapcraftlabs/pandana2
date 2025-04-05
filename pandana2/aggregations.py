@@ -1,29 +1,21 @@
-import geopandas as gpd
-import pandas as pd
 from typing import Callable, Union
 
+import pandas as pd
 
-def no_decay_aggregation(
-    max_weight: float, value_col: str, aggregation: str, weight_col="weight"
-):
+
+def no_decay(max_weight: float):
     """
     Network aggregations with no decay.  Values will be filtered out where weight_col
-        is greater than max_weight, then value_col is aggregated using the passed aggregation
-        method.  No decay means a value at max_weight will be weighted equally to a value
-        at the origin node.
+        is greater than max_weight.  No decay means a value at max_weight will be
+        weighted equally to a value at the origin node.
     :param max_weight: Values beyond max_weight (sum of weight_col in network distance)
         will not be considered
-    :param value_col: The column in values_df to aggregate
-    :param aggregation: The aggregation to use, can be anything which pandas.DataFrame.agg accepts
-    :param weight_col: The column in edges_df to use as the weight column
     :return: A value for the given origin node
     """
-    return lambda x: x[x[weight_col] <= max_weight][value_col].agg(aggregation).round(3)
+    return lambda weights: weights < max_weight
 
 
-def linear_decay_aggregation(
-    max_weight: float, value_col: str, aggregation: str, weight_col="weight"
-):
+def linear_decay(max_weight: float):
     """
     Network aggregations with linear decay.  Values will be filtered out where weight_col
         is greater than max_weight, then value_col is aggregated using the passed aggregation
@@ -32,24 +24,18 @@ def linear_decay_aggregation(
         as 0.5.
     :param max_weight: Values beyond max_weight (sum of weight_col in network distance)
         will not be considered
-    :param value_col: The column in values_df to aggregate
-    :param aggregation: The aggregation to use, can be anything which pandas.DataFrame.agg accepts
-    :param weight_col: The column in edges_df to use as the weight column
     :return: A value for the given origin node
     """
-    return (
-        lambda x: (
-            x[value_col] * (max_weight - x[weight_col]).clip(lower=0) / max_weight
-        )
-        .agg(aggregation)
-        .round(3)
-    )
+    return lambda weights: ((max_weight - weights).clip(lower=0) / max_weight)
 
 
 def aggregate(
     values_df: pd.DataFrame,
-    edges_df: pd.DataFrame,
-    group_func: Callable[[pd.DataFrame], float],
+    min_weights_df: pd.DataFrame,
+    decay_func: Callable[[pd.Series], pd.Series],
+    aggregation: str,
+    weight_col: str = "weight",
+    value_col: str = "value",
     origin_node_id_col: str = "from",
     destination_node_id_col: str = "to",
 ) -> Union[pd.Series, pd.DataFrame]:
@@ -58,18 +44,25 @@ def aggregate(
         merge the edges_df to values_df using the destination node id, group by the
         origin node_id, and perform the aggregation specified by group_func
     :param values_df: Typically returned by pandana2.nearest_nodes
-    :param edges_df: Typically returned by pandana2.make_edges
-    :param group_func: Typically one of the aggregation functions in this module, e.g.
+    :param min_weights_df: Typically returned by pandana2.dijkstra_all_pairs
+    :param decay_func: Typically one of the aggregation functions in this module, e.g.
         linear_decay_aggregation, but can be customized
-    :param destination_node_id_col: a column in edges_df, usually 'to'
-    :param origin_node_id_col: a column in edges_df, usually 'from'
-    :return: A series indexes by all the origin node ids in edges_df with values returned
+    :param value_col: The value attribute from values_df to aggregate
+    :param destination_node_id_col: A column in edges_df, usually 'to'
+    :param origin_node_id_col: A column in edges_df, usually 'from'
+    :param weight_col: A column in edges_df which contains the shortest path weight, usually 'weight'
+    :param aggregation: Anything you can pass to `.agg`, i.e. 'sum' or np.sum, etc
+    :return: A series indexed by all the origin node ids in edges_df with values returned
         by group_func
     """
+    merged_df = min_weights_df.merge(
+        values_df, how="inner", left_on=destination_node_id_col, right_index=True
+    )
+    decayed_weights = decay_func(merged_df[weight_col])
+    pd.testing.assert_index_equal(merged_df.index, decayed_weights.index)
     return (
-        edges_df.merge(
-            values_df, how="inner", left_on=destination_node_id_col, right_index=True
-        )
-        .groupby(origin_node_id_col)
-        .apply(group_func, include_groups=False)
+        (decayed_weights * merged_df[value_col])
+        .groupby(merged_df[origin_node_id_col])
+        .agg(aggregation)
+        .round(3)
     )
