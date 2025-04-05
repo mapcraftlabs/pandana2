@@ -132,11 +132,12 @@ def dijkstra_all_pairs(
       must be passed to keep the result performant and is the maximum weight to consider between
       nearby nodes.
     """
-    all_unique = set(edges_df[from_nodes_col].unique()) | set(
-        edges_df[to_nodes_col].unique()
+    # it's not the prettiest code, but node ids need to be ints by the time they get into numba
+    #  so we translate them here, which is very similar to pd.factorize
+    index_to_node_id = pd.Series(
+        np.unique([edges_df[from_nodes_col], edges_df[to_nodes_col]])
     )
-    node_id_to_index = {k: v for v, k in enumerate(all_unique)}
-    index_to_node_id = {v: k for k, v in node_id_to_index.items()}
+    node_id_to_index = pd.Series(index_to_node_id.index, index=index_to_node_id.values)
     edges_df[from_nodes_col] = edges_df[from_nodes_col].map(node_id_to_index)
     edges_df[to_nodes_col] = edges_df[to_nodes_col].map(node_id_to_index)
     edges_df = edges_df.sort_values(by=[from_nodes_col, to_nodes_col])
