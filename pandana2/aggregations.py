@@ -31,7 +31,7 @@ def linear_decay(max_weight: float):
 
 def aggregate(
     values_df: pd.DataFrame,
-    edges_df: pd.DataFrame,
+    min_weights_df: pd.DataFrame,
     decay_func: Callable[[pd.Series], pd.Series],
     aggregation: str,
     weight_col: str = "weight",
@@ -44,7 +44,7 @@ def aggregate(
         merge the edges_df to values_df using the destination node id, group by the
         origin node_id, and perform the aggregation specified by group_func
     :param values_df: Typically returned by pandana2.nearest_nodes
-    :param edges_df: Typically returned by pandana2.dijkstra_all_pairs
+    :param min_weights_df: Typically returned by pandana2.dijkstra_all_pairs
     :param decay_func: Typically one of the aggregation functions in this module, e.g.
         linear_decay_aggregation, but can be customized
     :param value_col: The value attribute from values_df to aggregate
@@ -55,7 +55,7 @@ def aggregate(
     :return: A series indexed by all the origin node ids in edges_df with values returned
         by group_func
     """
-    merged_df = edges_df.merge(
+    merged_df = min_weights_df.merge(
         values_df, how="inner", left_on=destination_node_id_col, right_index=True
     )
     decayed_weights = decay_func(merged_df[weight_col])
