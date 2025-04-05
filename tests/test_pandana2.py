@@ -65,9 +65,11 @@ def test_basic_edges(simple_graph):
 
 def test_linear_aggregation(simple_graph):
     edges = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
-    group_func = pandana2.linear_decay_aggregation(0.5, "value", "sum")
+    decay_func = pandana2.linear_decay(0.5)
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
-    aggregations_series = pandana2.aggregate(values_df, edges, group_func)
+    aggregations_series = pandana2.aggregate(
+        values_df=values_df, edges_df=edges, decay_func=decay_func, aggregation="sum"
+    )
     assert aggregations_series.to_dict() == {
         "a": round(2 * 0.2 / 0.5 + 3 * 0.3 / 0.5, 2),
         "b": 1,
@@ -80,9 +82,13 @@ def test_linear_aggregation(simple_graph):
 
 def test_flat_aggregation(simple_graph):
     edges = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
-    group_func = pandana2.no_decay_aggregation(0.5, "value", "sum")
     values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
-    aggregations_series = pandana2.aggregate(values_df, edges, group_func)
+    aggregations_series = pandana2.aggregate(
+        values_df=values_df,
+        edges_df=edges,
+        decay_func=pandana2.no_decay(0.5),
+        aggregation="sum",
+    )
     assert aggregations_series.to_dict() == {
         "a": 5,
         "b": 1,
@@ -145,7 +151,7 @@ def test_workflow():
     print("Finished dijkstra_all_pairs in {:.2f} seconds".format(time.time() - t0))
     print(distances_df)
 
-    group_func = pandana2.no_decay_aggregation(1500, "$/SQUARE FEET", "mean")
+    group_func = pandana2.no_decay(1500, "$/SQUARE FEET", "mean")
     t0 = time.time()
     nodes["average price/sqft"] = pandana2.aggregate(
         redfin_df, distances_df, group_func
