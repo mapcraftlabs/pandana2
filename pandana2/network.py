@@ -15,6 +15,8 @@ def nearest_nodes(
     return (
         values_gdf.to_crs(epsg=3857)
         .sjoin_nearest(nodes_gdf.to_crs(epsg=3857))
+        # older versions of geopandas name the index "index_right" and newer versions use
+        # the actual index name, so we rename them both and one of them will work
         .rename(columns={"index_right": "node_id", nodes_gdf.index.name: "node_id"})
         .set_index("node_id")
     )
