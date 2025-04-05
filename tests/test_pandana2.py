@@ -139,6 +139,8 @@ def test_home_price_aggregation():
         geometry=gpd.points_from_xy(redfin_df.LONGITUDE, redfin_df.LATITUDE),
         crs="EPSG:4326",
     )
+    print(redfin_df)
+    print(nodes)
 
     redfin_df = pandana2.nearest_nodes(redfin_df, nodes)
     assert redfin_df.index.isin(nodes.index).all()
