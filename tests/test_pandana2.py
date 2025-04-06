@@ -80,7 +80,7 @@ def test_linear_aggregation(simple_graph):
         decay_func=decay_func,
         aggregation="sum",
     )
-    assert aggregations_series.to_dict() == {
+    assert aggregations_series.round(2).to_dict() == {
         "a": round(2 * 0.2 / 0.5 + 3 * 0.3 / 0.5, 2),
         "b": 1,
         "c": 3 + 2 * 0.4 / 0.5,
