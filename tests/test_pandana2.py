@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 import pandana2
-from pandana2 import dijkstra
 
 
 @pytest.fixture
@@ -28,12 +27,17 @@ def simple_graph():
     edges = pd.concat([simple_graph, simple_graph_reverse])
     nodes = pd.DataFrame(index=["a", "b", "c", "d", "e", "f"])
     network = pandana2.PandanaNetwork(edges=edges, nodes=nodes)
-    network.preprocess(weight_cutoff=1.2)
+    network.preprocess(
+        weight_cutoff=1.2,
+        from_nodes_col="from",
+        to_nodes_col="to",
+        edge_costs_col="edge_cost",
+    )
     return network
 
 
 def test_basic_edges(simple_graph):
-    assert simple_graph.edges.to_dict(orient="records") == [
+    assert simple_graph.min_weights_df.to_dict(orient="records") == [
         {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},
         {"from": "a", "to": "d", "weight": 0.3},
@@ -69,9 +73,9 @@ def test_basic_edges(simple_graph):
 
 def test_linear_aggregation(simple_graph):
     decay_func = pandana2.linear_decay(0.5)
-    values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
+    values = pd.Series([1, 2, 3], index=["b", "d", "c"])
     aggregations_series = simple_graph.aggregate(
-        values_df=values_df,
+        values=values,
         decay_func=decay_func,
         aggregation="sum",
     )
@@ -86,9 +90,9 @@ def test_linear_aggregation(simple_graph):
 
 
 def test_flat_aggregation(simple_graph):
-    values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
+    values = pd.Series([1, 2, 3], index=["b", "d", "c"])
     aggregations_series = simple_graph.aggregate(
-        values_df=values_df,
+        values=values,
         decay_func=pandana2.no_decay(0.5),
         aggregation="sum",
     )
