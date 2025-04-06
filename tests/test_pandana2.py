@@ -159,5 +159,4 @@ def test_home_price_aggregation(redfin_df):
         decay_func=pandana2.no_decay(1500),
         aggregation="sum",
     )
-    nodes["count"] = nodes["count"].fillna(0)
     print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
