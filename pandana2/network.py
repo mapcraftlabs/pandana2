@@ -27,6 +27,20 @@ class PandanaNetwork:
         to_nodes_col: str = "v",
         edge_costs_col: str = "length",
     ):
+        """
+        Convert the edges DataFrame (which represents the connections in a network), to a "minimum
+            weights" DataFrame which contains all the from-to pairs with the shortest path weight
+            between from and to nodes, for all pairs such that the minimum weight is less than the
+            weight cutoff passed here.  This can be a very expensive operation, but for well-chosen
+            networks and cutoffs it should be very fast.
+        :param weight_cutoff: Don't investigate from-to pairs whose minimum path is larger than
+            this cutoff.
+        :param from_nodes_col: The name of the "from" nodes column (e.g. osmnx uses "u")
+        :param to_nodes_col: The name of the "from" nodes column (e.g. osmnx uses "v")
+        :param edge_costs_col: The name of the "from" nodes column (e.g. osmnx uses "distance")
+            for Euclidian distance, but any impedance (like travel time) could also be used here.
+        :return:
+        """
         self.min_weights_df = dijkstra_all_pairs(
             self.edges.reset_index(),
             cutoff=weight_cutoff,
@@ -60,24 +74,25 @@ class PandanaNetwork:
         aggregation: str,
     ) -> pd.Series | pd.DataFrame:
         """
-        Given a values_df which is indexed by node_id and an edges_df with a weight column,
-            merge the edges_df to values_df using the destination node id, group by the
-            origin node_id, and perform the aggregation specified by group_func
+        Perform a network-based aggregation - this is the whole point of this python library.
         :param values: A series where the index is node_ids from the node dataframe and the
             values are floating point values you want to aggregate.  In other words, it's the
-            values and the node_ids they are located at.
-        :param decay_func: Typically one of the aggregation functions in this module, e.g.
-            linear_decay_aggregation, but can be customized
+            values and the node_ids they are located at.  node_ids can and likely will be
+            repeated in the index (i.e. not unique).
+        :param decay_func: Typically one of the decay functions in this module, e.g.
+            linear_decay, no_decay, etc., and can be customized.
         :param aggregation: Anything you can pass to `.agg`  i.e. 'sum' or 'np.sum', etc.
-        :return: A series indexed by all the origin node ids in edges_df with values returned
-            by group_func
+        :return: A series indexed by all the origin node ids in 'self.nodes' with values computed
+            for this aggregation.
         """
         assert isinstance(
             values, pd.Series
         ), "Values should be a Series (see docstring)"
+
         assert values.index.isin(
             self.nodes.index
         ).all(), "Values should have an index which maps to the nodes DataFrame"
+
         weight_col = "weight"
         origin_node_id_col = "from"
         destination_node_id_col = "to"
@@ -89,6 +104,7 @@ class PandanaNetwork:
             left_on=destination_node_id_col,
             right_index=True,
         )
+
         decayed_weights = decay_func(merged_df[weight_col])
         pd.testing.assert_index_equal(merged_df.index, decayed_weights.index)
 
