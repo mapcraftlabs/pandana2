@@ -46,7 +46,9 @@ class PandanaNetwork:
             nodes GeoDataFrame of this network, i.e. the id of closest node for each row in
             values_gdf
         """
-        joined_gdf = values_gdf.sjoin_nearest(self.nodes)
+        joined_gdf = values_gdf.to_crs(epsg=3857).sjoin_nearest(
+            self.nodes.to_crs(epsg=3857)
+        )
         if "index_right" in joined_gdf.columns:
             # older versions of geopandas call it index_right
             return joined_gdf["index_right"]
@@ -62,13 +64,21 @@ class PandanaNetwork:
         Given a values_df which is indexed by node_id and an edges_df with a weight column,
             merge the edges_df to values_df using the destination node id, group by the
             origin node_id, and perform the aggregation specified by group_func
-        :param values: TODO
+        :param values: A series where the index is node_ids from the node dataframe and the
+            values are floating point values you want to aggregate.  In other words, it's the
+            values and the node_ids they are located at.
         :param decay_func: Typically one of the aggregation functions in this module, e.g.
             linear_decay_aggregation, but can be customized
         :param aggregation: Anything you can pass to `.agg`  i.e. 'sum' or 'np.sum', etc.
         :return: A series indexed by all the origin node ids in edges_df with values returned
             by group_func
         """
+        assert isinstance(
+            values, pd.Series
+        ), "Values should be a Series (see docstring)"
+        assert values.index.isin(
+            self.nodes.index
+        ).all(), "Values should have an index which maps to the nodes DataFrame"
         weight_col = "weight"
         origin_node_id_col = "from"
         destination_node_id_col = "to"

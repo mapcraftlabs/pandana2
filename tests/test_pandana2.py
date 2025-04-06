@@ -135,7 +135,6 @@ def test_home_price_aggregation(redfin_df):
     net = pandana2.PandanaNetwork.read("pandana_oakland.pickle")
 
     redfin_df["node_id"] = net.nearest_nodes(redfin_df)
-    redfin_df["ones"] = 1
     assert redfin_df.node_id.isin(net.nodes.index).all()
 
     t0 = time.time()
@@ -145,15 +144,13 @@ def test_home_price_aggregation(redfin_df):
     t0 = time.time()
     nodes = net.nodes.copy()
     nodes["average price/sqft"] = net.aggregate(
-        redfin_df,
+        values=pd.Series(redfin_df["$/SQUARE FEET"], index=redfin_df["node_id"]),
         decay_func=pandana2.no_decay(1500),
-        value_col="$/SQUARE FEET",
         aggregation="mean",
     )
     nodes["count"] = net.aggregate(
-        redfin_df,
+        values=pd.Series(1, index=redfin_df["node_id"]),
         decay_func=pandana2.no_decay(1500),
-        value_col="ones",
         aggregation="sum",
     )
     nodes["count"] = nodes["count"].fillna(0)
