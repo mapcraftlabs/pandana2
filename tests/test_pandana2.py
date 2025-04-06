@@ -149,14 +149,50 @@ def test_home_price_aggregation(redfin_df):
 
     t0 = time.time()
     nodes = net.nodes.copy()
-    nodes["average price/sqft"] = net.aggregate(
-        values=pd.Series(redfin_df["$/SQUARE FEET"], index=redfin_df["node_id"]),
-        decay_func=pandana2.no_decay(1500),
-        aggregation="mean",
+    test_osm_id = 53057774
+
+    # count observations within 500 meters
+    nodes["count"] = net.aggregate(
+        values=pd.Series(1, index=redfin_df["node_id"]),
+        decay_func=pandana2.no_decay(500),
+        aggregation="sum",
     )
+    assert nodes["count"].loc[test_osm_id] == 2.0
+
+    # count observations within 1000 meters
+    nodes["count"] = net.aggregate(
+        values=pd.Series(1, index=redfin_df["node_id"]),
+        decay_func=pandana2.no_decay(1000),
+        aggregation="sum",
+    )
+    assert nodes["count"].loc[test_osm_id] == 4.0
+
+    # count observations within 1500 meters
     nodes["count"] = net.aggregate(
         values=pd.Series(1, index=redfin_df["node_id"]),
         decay_func=pandana2.no_decay(1500),
         aggregation="sum",
+    )
+    assert nodes["count"].loc[test_osm_id] == 14.0
+
+    # now let's find the 4 observations within 1000 meters
+    # these are the nodes within 1000 meters
+    filtered_min_weights_df = net.min_weights_df[
+        (net.min_weights_df["from"] == test_osm_id)
+        & (net.min_weights_df.weight <= 1000)
+    ]
+    # these are the redfin observations within 1000 meters
+    filtered_redfin_df = redfin_df[
+        redfin_df.node_id.isin(filtered_min_weights_df["to"])
+    ]
+    assert pd.Series(
+        filtered_redfin_df["$/SQUARE FEET"].values,
+        index=filtered_redfin_df["node_id"].values,
+    ).to_dict() == {53061872: 543.0, 53148507: 821.0, 53098112: 806.0, 53148506: 585.0}
+
+    nodes["average price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"], index=redfin_df["node_id"]),
+        decay_func=pandana2.no_decay(1500),
+        aggregation="mean",
     )
     print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
