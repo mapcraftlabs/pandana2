@@ -126,13 +126,19 @@ def redfin_df():
 
 
 def test_home_price_aggregation(redfin_df):
+    nodes_filename = "tests/data/nodes.parquet"
+    edges_filename = "tests/data/edges.parquet"
+
     """
+    # uncomment to refresh the test data
     pandana2.PandanaNetwork.from_osmnx_local_streets_from_place_query(
         "Oakland, CA"
-    ).write("pandana_oakland.pickle")
+    ).write(edges_filename=edges_filename, nodes_filename=nodes_filename)
     """
 
-    net = pandana2.PandanaNetwork.read("pandana_oakland.pickle")
+    net = pandana2.PandanaNetwork.read(
+        edges_filename=edges_filename, nodes_filename=nodes_filename
+    )
 
     redfin_df["node_id"] = net.nearest_nodes(redfin_df)
     assert redfin_df.node_id.isin(net.nodes.index).all()
@@ -155,19 +161,3 @@ def test_home_price_aggregation(redfin_df):
     )
     nodes["count"] = nodes["count"].fillna(0)
     print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
-
-    # plot the output
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(24, 16))
-    net.edges.plot(ax=ax, color="grey", linewidth=1, zorder=0)
-    nodes.plot(column="count", markersize=1, ax=ax, legend=True, cmap="Reds", zorder=2)
-    redfin_df.plot(
-        column="$/SQUARE FEET",
-        markersize=1,
-        ax=ax,
-        legend=True,
-        cmap="Greens",
-        zorder=3,
-    )
-    plt.savefig("pandana_test_plot.svg", bbox_inches="tight")

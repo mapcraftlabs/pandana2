@@ -1,7 +1,6 @@
 import geopandas as gpd
 import pandas as pd
 import osmnx
-import pickle
 from typing import Callable
 
 from pandana2.dijkstra import dijkstra_all_pairs
@@ -100,20 +99,22 @@ class PandanaNetwork:
             .round(3)
         )
 
-    def write(self, filename: str):
+    def write(self, edges_filename: str, nodes_filename: str):
         """
-        Write this object to a pickled file
+        Write this object to 2 geoparquet files
         """
-        with open(filename, "wb") as file:
-            pickle.dump(self, file)
+        self.nodes.to_parquet(nodes_filename)
+        self.edges.to_parquet(edges_filename)
 
     @staticmethod
-    def read(filename: str):
+    def read(edges_filename: str, nodes_filename: str):
         """
-        Read a PandanaNetwork from a pickled file
+        Read a PandanaNetwork from 2 parquet files
         """
-        with open(filename, "rb") as file:
-            return pickle.load(file)
+        return PandanaNetwork(
+            edges=gpd.read_parquet(edges_filename),
+            nodes=gpd.read_parquet(nodes_filename),
+        )
 
     @staticmethod
     def from_osmnx_local_streets_from_place_query(place_query: str):
