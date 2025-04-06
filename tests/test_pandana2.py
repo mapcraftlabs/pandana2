@@ -2,6 +2,7 @@ import time
 
 import geopandas as gpd
 import osmnx
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -157,6 +158,7 @@ def test_home_price_aggregation(redfin_df):
         decay_func=pandana2.no_decay(500),
         aggregation="sum",
     )
+    print("Finished first aggregation in {:.2f} seconds".format(time.time() - t0))
     assert nodes["count"].loc[test_osm_id] == 2.0
 
     # count observations within 1000 meters
@@ -191,8 +193,25 @@ def test_home_price_aggregation(redfin_df):
     ).to_dict() == {53061872: 543.0, 53148507: 821.0, 53098112: 806.0, 53148506: 585.0}
 
     nodes["average price/sqft"] = net.aggregate(
-        values=pd.Series(redfin_df["$/SQUARE FEET"], index=redfin_df["node_id"]),
-        decay_func=pandana2.no_decay(1500),
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.no_decay(1000),
         aggregation="mean",
     )
-    print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
+    expected = (543 + 821 + 806 + 585) / 4
+    assert nodes["average price/sqft"].loc[test_osm_id] == expected
+
+    nodes["average price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.linear_decay(1000),
+        aggregation="mean",
+    )
+    expected = np.average(
+        [543, 821, 806, 585],
+        weights=[
+            (1000 - 947.10) / 1000,
+            (1000 - 148.65) / 1000,
+            (1000 - 856.11) / 1000,
+            (1000 - 226.53) / 1000,
+        ],
+    )
+    assert round(nodes["average price/sqft"].loc[test_osm_id], 4) == round(expected, 4)
