@@ -1,6 +1,6 @@
 import pandas as pd
 
-from pandana2 import dijkstra_all_pairs
+from pandana2.dijkstra import dijkstra_all_pairs
 
 
 def test_dijkstra_basic():

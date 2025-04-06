@@ -24,12 +24,20 @@ def simple_graph():
         ]
     )
     simple_graph_reverse = simple_graph.rename(columns={"from": "to", "to": "from"})
-    return pd.concat([simple_graph, simple_graph_reverse])
+    edges = pd.concat([simple_graph, simple_graph_reverse])
+    nodes = pd.DataFrame(index=["a", "b", "c", "d", "e", "f"])
+    network = pandana2.PandanaNetwork(edges=edges, nodes=nodes)
+    network.preprocess(
+        weight_cutoff=1.2,
+        from_nodes_col="from",
+        to_nodes_col="to",
+        edge_costs_col="edge_cost",
+    )
+    return network
 
 
 def test_basic_edges(simple_graph):
-    edges = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
-    assert edges.to_dict(orient="records") == [
+    assert simple_graph.min_weights_df.to_dict(orient="records") == [
         {"from": "a", "to": "a", "weight": 0.0},
         {"from": "a", "to": "c", "weight": 0.2},
         {"from": "a", "to": "d", "weight": 0.3},
@@ -64,12 +72,10 @@ def test_basic_edges(simple_graph):
 
 
 def test_linear_aggregation(simple_graph):
-    min_weights_df = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
     decay_func = pandana2.linear_decay(0.5)
-    values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
-    aggregations_series = pandana2.aggregate(
-        values_df=values_df,
-        min_weights_df=min_weights_df,
+    values = pd.Series([1, 2, 3], index=["b", "d", "c"])
+    aggregations_series = simple_graph.aggregate(
+        values=values,
         decay_func=decay_func,
         aggregation="sum",
     )
@@ -84,11 +90,9 @@ def test_linear_aggregation(simple_graph):
 
 
 def test_flat_aggregation(simple_graph):
-    min_weights_df = pandana2.dijkstra_all_pairs(simple_graph, cutoff=1.2)
-    values_df = pd.DataFrame({"value": [1, 2, 3]}, index=["b", "d", "c"])
-    aggregations_series = pandana2.aggregate(
-        values_df=values_df,
-        min_weights_df=min_weights_df,
+    values = pd.Series([1, 2, 3], index=["b", "d", "c"])
+    aggregations_series = simple_graph.aggregate(
+        values=values,
         decay_func=pandana2.no_decay(0.5),
         aggregation="sum",
     )
@@ -111,69 +115,48 @@ def get_amenity_as_dataframe(place_query: str, amenity: str):
     return restaurants
 
 
-def test_home_price_aggregation():
-    """
-    # nodes and edges created with this code
-
-    place_query = "Oakland, CA"
-    graph = osmnx.graph_from_place(place_query, network_type="drive")
-    nodes, edges = osmnx.graph_to_gdfs(graph)
-
-    print(nodes)
-    print(edges)
-
-    nodes[["x", "y"]].to_parquet("nodes.parquet")
-    edges.reset_index(level=2, drop=True)[["length"]].to_parquet("edges.parquet")
-    """
-    edges = pd.read_parquet("tests/data/edges.parquet")
-    nodes = pd.read_parquet("tests/data/nodes.parquet")
-    nodes = gpd.GeoDataFrame(
-        nodes,
-        geometry=gpd.points_from_xy(nodes.x, nodes.y),
-        crs="EPSG:4326",
-    ).drop(columns=["x", "y"])
-
-    redfin_df = pd.read_csv("tests/data/redfin_2025-04-04-13-35-42.csv")
-    redfin_df = gpd.GeoDataFrame(
-        redfin_df[["$/SQUARE FEET"]],
-        geometry=gpd.points_from_xy(redfin_df.LONGITUDE, redfin_df.LATITUDE),
+@pytest.fixture()
+def redfin_df():
+    df = pd.read_csv("tests/data/redfin_2025-04-04-13-35-42.csv")
+    return gpd.GeoDataFrame(
+        df[["$/SQUARE FEET"]],
+        geometry=gpd.points_from_xy(df.LONGITUDE, df.LATITUDE),
         crs="EPSG:4326",
     )
 
-    redfin_df = pandana2.nearest_nodes(redfin_df, nodes)
-    assert redfin_df.index.isin(nodes.index).all()
+
+def test_home_price_aggregation(redfin_df):
+    nodes_filename = "tests/data/nodes.parquet"
+    edges_filename = "tests/data/edges.parquet"
+
+    """
+    # uncomment to refresh the test data
+    pandana2.PandanaNetwork.from_osmnx_local_streets_from_place_query(
+        "Oakland, CA"
+    ).write(edges_filename=edges_filename, nodes_filename=nodes_filename)
+    """
+
+    net = pandana2.PandanaNetwork.read(
+        edges_filename=edges_filename, nodes_filename=nodes_filename
+    )
+
+    redfin_df["node_id"] = net.nearest_nodes(redfin_df)
+    assert redfin_df.node_id.isin(net.nodes.index).all()
 
     t0 = time.time()
-    min_distances_df = pandana2.dijkstra_all_pairs(
-        edges.reset_index(),
-        cutoff=1500,
-        from_nodes_col="u",
-        to_nodes_col="v",
-        edge_costs_col="length",
-    )
+    net.preprocess(weight_cutoff=1500)
     print("Finished dijkstra in {:.2f} seconds".format(time.time() - t0))
 
     t0 = time.time()
-    average_price_sqft = pandana2.aggregate(
-        redfin_df,
-        min_weights_df=min_distances_df,
+    nodes = net.nodes.copy()
+    nodes["average price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"], index=redfin_df["node_id"]),
         decay_func=pandana2.no_decay(1500),
-        value_col="$/SQUARE FEET",
         aggregation="mean",
     )
-    print(average_price_sqft)
-    print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
-    """
-    # plot the output
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
-    plt.title("Average Sales Price/SQFT")
-    nodes.plot(
-        column="average price/sqft",
-        markersize=2,
-        ax=ax,
-        legend=True,
+    nodes["count"] = net.aggregate(
+        values=pd.Series(1, index=redfin_df["node_id"]),
+        decay_func=pandana2.no_decay(1500),
+        aggregation="sum",
     )
-    plt.savefig("average price per sqft.png", dpi=150, bbox_inches="tight")
-    """
+    print("Finished aggregation in {:.2f} seconds".format(time.time() - t0))
