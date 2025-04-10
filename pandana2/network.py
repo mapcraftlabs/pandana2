@@ -1,8 +1,9 @@
 import geopandas as gpd
 import pandas as pd
 import osmnx
-from typing import Callable, Literal
+from typing import Literal
 
+from pandana2.decay_functions import PandanaDecayFunction
 from pandana2.dijkstra import dijkstra_all_pairs
 
 Aggregation = Literal["max", "mean", "median", "min", "std", "sum"]
@@ -72,7 +73,7 @@ class PandanaNetwork:
     def aggregate(
         self,
         values: pd.Series,
-        decay_func: Callable[[pd.Series], pd.Series],
+        decay_func: PandanaDecayFunction,
         aggregation: Aggregation,
     ) -> pd.Series | pd.DataFrame:
         """
@@ -107,11 +108,17 @@ class PandanaNetwork:
             right_index=True,
         )
 
-        decayed_weights = decay_func(merged_df[weight_col])
+        decayed_weights = decay_func.weights(merged_df[weight_col])
+        mask = decay_func.mask(merged_df[weight_col])
         pd.testing.assert_index_equal(merged_df.index, decayed_weights.index)
+        pd.testing.assert_index_equal(merged_df.index, mask.index)
 
         def do_aggregation(_values: pd.Series, _aggregation: Aggregation) -> pd.Series:
-            return _values.groupby(merged_df[origin_node_id_col]).agg(_aggregation)
+            return (
+                _values[mask]
+                .groupby(merged_df[mask][origin_node_id_col])
+                .agg(_aggregation)
+            )
 
         if aggregation == "mean":
             # weighted mean to account for decay of weights, otherwise a mean with
@@ -122,7 +129,10 @@ class PandanaNetwork:
             sum_of_weights = do_aggregation(decayed_weights, "sum")
             return sum_of_values / sum_of_weights
 
-        return do_aggregation(decayed_weights * merged_df[values_col], aggregation)
+        if aggregation in ["min", "max"]:
+            return do_aggregation(merged_df[values_col], aggregation)
+
+        return do_aggregation(merged_df[values_col] * decayed_weights, aggregation)
 
     def write(self, edges_filename: str, nodes_filename: str):
         """

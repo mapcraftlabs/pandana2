@@ -1,4 +1,13 @@
-def no_decay(max_weight: float):
+import pandas as pd
+from typing import Callable
+
+
+class PandanaDecayFunction:
+    mask: Callable[[pd.Series], pd.Series]
+    weights: Callable[[pd.Series], pd.Series]
+
+
+class NoDecay(PandanaDecayFunction):
     """
     Network aggregations with no decay.  Values will be filtered out where the shortest
         path weight is greater than max_weight.  No decay means a value at max_weight
@@ -7,10 +16,13 @@ def no_decay(max_weight: float):
         distance) will not be considered
     :return: A value for the given origin node
     """
-    return lambda weights: weights < max_weight
+
+    def __init__(self, max_weight: float):
+        self.mask = lambda weights: weights < max_weight
+        self.weights = lambda weights: pd.Series(1, index=weights.index)
 
 
-def linear_decay(max_weight: float):
+class LinearDecay(PandanaDecayFunction):
     """
     Network aggregations with linear decay.  Values will be filtered out where the shortest
         path weight is greater than max_weight.  Linear decay means a value at max_weight will
@@ -20,4 +32,7 @@ def linear_decay(max_weight: float):
         will not be considered
     :return: A value for the given origin node
     """
-    return lambda weights: ((max_weight - weights).clip(lower=0) / max_weight)
+
+    def __init__(self, max_weight: float):
+        self.mask = lambda weights: weights < max_weight
+        self.weights = lambda weights: (max_weight - weights) / max_weight

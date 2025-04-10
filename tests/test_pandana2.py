@@ -73,7 +73,7 @@ def test_basic_edges(simple_graph):
 
 
 def test_linear_aggregation(simple_graph):
-    decay_func = pandana2.linear_decay(0.5)
+    decay_func = pandana2.LinearDecay(0.5)
     values = pd.Series([1, 2, 3], index=["b", "d", "c"])
     aggregations_series = simple_graph.aggregate(
         values=values,
@@ -82,11 +82,9 @@ def test_linear_aggregation(simple_graph):
     )
     assert aggregations_series.round(2).to_dict() == {
         "a": round(2 * 0.2 / 0.5 + 3 * 0.3 / 0.5, 2),
-        "b": 1,
+        "b": 1.0,
         "c": 3 + 2 * 0.4 / 0.5,
         "d": 2 + 3 * 0.4 / 0.5,
-        "e": 0,
-        "f": 0,
     }
 
 
@@ -94,7 +92,7 @@ def test_flat_aggregation(simple_graph):
     values = pd.Series([1, 2, 3], index=["b", "d", "c"])
     aggregations_series = simple_graph.aggregate(
         values=values,
-        decay_func=pandana2.no_decay(0.5),
+        decay_func=pandana2.NoDecay(0.5),
         aggregation="sum",
     )
     assert aggregations_series.to_dict() == {
@@ -102,8 +100,6 @@ def test_flat_aggregation(simple_graph):
         "b": 1,
         "c": 5,
         "d": 5,
-        "e": 0,
-        "f": 0,
     }
 
 
@@ -155,7 +151,7 @@ def test_home_price_aggregation(redfin_df):
     # count observations within 500 meters
     nodes["count"] = net.aggregate(
         values=pd.Series(1, index=redfin_df["node_id"]),
-        decay_func=pandana2.no_decay(500),
+        decay_func=pandana2.NoDecay(500),
         aggregation="sum",
     )
     print("Finished first aggregation in {:.2f} seconds".format(time.time() - t0))
@@ -164,7 +160,7 @@ def test_home_price_aggregation(redfin_df):
     # count observations within 1000 meters
     nodes["count"] = net.aggregate(
         values=pd.Series(1, index=redfin_df["node_id"]),
-        decay_func=pandana2.no_decay(1000),
+        decay_func=pandana2.NoDecay(1000),
         aggregation="sum",
     )
     assert nodes["count"].loc[test_osm_id] == 4.0
@@ -172,7 +168,7 @@ def test_home_price_aggregation(redfin_df):
     # count observations within 1500 meters
     nodes["count"] = net.aggregate(
         values=pd.Series(1, index=redfin_df["node_id"]),
-        decay_func=pandana2.no_decay(1500),
+        decay_func=pandana2.NoDecay(1500),
         aggregation="sum",
     )
     assert nodes["count"].loc[test_osm_id] == 14.0
@@ -194,7 +190,7 @@ def test_home_price_aggregation(redfin_df):
 
     nodes["average price/sqft"] = net.aggregate(
         values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
-        decay_func=pandana2.no_decay(1000),
+        decay_func=pandana2.NoDecay(1000),
         aggregation="mean",
     )
     expected = (543 + 821 + 806 + 585) / 4
@@ -202,7 +198,7 @@ def test_home_price_aggregation(redfin_df):
 
     nodes["average price/sqft"] = net.aggregate(
         values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
-        decay_func=pandana2.linear_decay(1000),
+        decay_func=pandana2.LinearDecay(1000),
         aggregation="mean",
     )
     expected = np.average(
@@ -215,3 +211,33 @@ def test_home_price_aggregation(redfin_df):
         ],
     )
     assert round(nodes["average price/sqft"].loc[test_osm_id], 4) == round(expected, 4)
+
+    nodes["min price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.NoDecay(1000),
+        aggregation="min",
+    )
+    assert nodes["min price/sqft"].loc[test_osm_id] == 543
+
+    # weights should be ignored
+    nodes["min price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.LinearDecay(1000),
+        aggregation="min",
+    )
+    assert nodes["min price/sqft"].loc[test_osm_id] == 543
+
+    nodes["max price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.NoDecay(1000),
+        aggregation="max",
+    )
+    assert nodes["max price/sqft"].loc[test_osm_id] == 821
+
+    # weights should be ignored
+    nodes["max price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.LinearDecay(1000),
+        aggregation="max",
+    )
+    assert nodes["max price/sqft"].loc[test_osm_id] == 821

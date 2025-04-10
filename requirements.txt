@@ -1,5 +1,6 @@
 geopandas>=0.13.2
 numba
 osmnx>=1.9.2
+numpy
 pandas>=2.2.0
 shapely>=2.0.1
