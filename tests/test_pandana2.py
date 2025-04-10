@@ -241,3 +241,31 @@ def test_home_price_aggregation(redfin_df):
         aggregation="max",
     )
     assert nodes["max price/sqft"].loc[test_osm_id] == 821
+
+    nodes["median price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.NoDecay(1000),
+        aggregation="median",
+    )
+    assert nodes["median price/sqft"].loc[test_osm_id] == 585
+
+    nodes["median price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.LinearDecay(1000),
+        aggregation="median",
+    )
+    assert nodes["median price/sqft"].loc[test_osm_id] == 806
+
+    nodes["std price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.NoDecay(1000),
+        aggregation="std",
+    )
+    assert round(nodes["std price/sqft"].loc[test_osm_id], 2) == 125.74
+
+    nodes["std price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.LinearDecay(1000),
+        aggregation="std",
+    )
+    assert round(nodes["std price/sqft"].loc[test_osm_id], 2) == 118.02
