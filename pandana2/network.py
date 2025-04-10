@@ -1,14 +1,10 @@
-from typing import Literal
-
 import geopandas as gpd
 import osmnx
 import pandas as pd
 
-from pandana2 import utils
+from pandana2.utils import Aggregation, do_single_aggregation
 from pandana2.decay_functions import PandanaDecayFunction
 from pandana2.dijkstra import dijkstra_all_pairs
-
-Aggregation = Literal["max", "mean", "median", "min", "std", "sum"]
 
 
 class PandanaNetwork:
@@ -76,7 +72,7 @@ class PandanaNetwork:
         self,
         values: pd.Series,
         decay_func: PandanaDecayFunction,
-        aggregation: Aggregation,
+        aggregation: Aggregation | dict[str, Aggregation],
     ) -> pd.Series | pd.DataFrame:
         """
         Perform a network-based aggregation - this is the whole point of this python library.
@@ -113,32 +109,24 @@ class PandanaNetwork:
         merged_df["decayed_weights"] = decay_func.weights(merged_df[weight_col])
         merged_df = merged_df[decay_func.mask(merged_df[weight_col])]
 
-        if aggregation in ["median", "std"]:
-            lambda_func = {
-                "median": utils.weighted_median,
-                "std": utils.weighted_std,
-            }[aggregation]
-            return merged_df.groupby(origin_node_id_col).apply(
-                lambda group: lambda_func(
-                    group[values_col].values, weights=group["decayed_weights"].values
-                ),
-                include_groups=False,
+        if isinstance(aggregation, dict):
+            # support multiple aggregation with one merge dataframe
+            return {
+                k: do_single_aggregation(
+                    merged_df=merged_df,
+                    values_col=values_col,
+                    origin_node_id_col=origin_node_id_col,
+                    aggregation=v,
+                )
+                for k, v in aggregation.items()
+            }
+        else:
+            return do_single_aggregation(
+                merged_df=merged_df,
+                values_col=values_col,
+                origin_node_id_col=origin_node_id_col,
+                aggregation=aggregation,
             )
-
-        if aggregation not in ["min", "max"]:
-            # do not every apply weights for min / max
-            merged_df[values_col] *= merged_df["decayed_weights"]
-
-        if aggregation == "mean":
-            # could do this with np.average, but it should be faster to do it with 2
-            # sums than a .apply like the median below
-            ret_df = merged_df.groupby(origin_node_id_col).agg(
-                sum_of_values=(values_col, "sum"),
-                sum_of_weights=("decayed_weights", "sum"),
-            )
-            return ret_df.sum_of_values / ret_df.sum_of_weights
-
-        return merged_df.groupby(origin_node_id_col)[values_col].agg(aggregation)
 
     def write(self, edges_filename: str, nodes_filename: str):
         """

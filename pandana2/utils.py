@@ -1,4 +1,7 @@
+from typing import Literal
+
 import numpy as np
+import pandas as pd
 
 
 def weighted_median(data, weights):
@@ -41,3 +44,40 @@ def weighted_std(values, weights):
     average = np.average(values, weights=weights)
     variance = np.average((values - average) ** 2, weights=weights)
     return np.sqrt(variance)
+
+
+Aggregation = Literal["max", "mean", "median", "min", "std", "sum"]
+
+
+def do_single_aggregation(
+    merged_df: pd.DataFrame,
+    values_col: str,
+    origin_node_id_col: str,
+    aggregation: Aggregation,
+):
+    if aggregation in ["median", "std"]:
+        lambda_func = {
+            "median": weighted_median,
+            "std": weighted_std,
+        }[aggregation]
+        return merged_df.groupby(origin_node_id_col).apply(
+            lambda group: lambda_func(
+                group[values_col].values, weights=group["decayed_weights"].values
+            ),
+            include_groups=False,
+        )
+
+    if aggregation not in ["min", "max"]:
+        # do not every apply weights for min / max
+        merged_df[values_col] *= merged_df["decayed_weights"]
+
+    if aggregation == "mean":
+        # could do this with np.average, but it should be faster to do it with 2
+        # sums than a .apply like the median below
+        ret_df = merged_df.groupby(origin_node_id_col).agg(
+            sum_of_values=(values_col, "sum"),
+            sum_of_weights=("decayed_weights", "sum"),
+        )
+        return ret_df.sum_of_values / ret_df.sum_of_weights
+
+    return merged_df.groupby(origin_node_id_col)[values_col].agg(aggregation)
