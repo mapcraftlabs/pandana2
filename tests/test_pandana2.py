@@ -1,8 +1,8 @@
 import time
 
 import geopandas as gpd
-import osmnx
 import numpy as np
+import osmnx
 import pandas as pd
 import pytest
 

@@ -1,8 +1,8 @@
+from typing import Literal
+
 import geopandas as gpd
-import numpy as np
-import pandas as pd
 import osmnx
-from typing import Callable, Literal
+import pandas as pd
 
 from pandana2 import utils
 from pandana2.decay_functions import PandanaDecayFunction

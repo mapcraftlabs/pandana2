@@ -1,5 +1,6 @@
-import pandas as pd
 from typing import Callable
+
+import pandas as pd
 
 
 class PandanaDecayFunction:
