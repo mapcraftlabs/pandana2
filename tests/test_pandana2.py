@@ -269,3 +269,35 @@ def test_home_price_aggregation(redfin_df):
         aggregation="std",
     )
     assert round(nodes["std price/sqft"].loc[test_osm_id], 2) == 118.02
+
+    nodes["average price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.ExponentialDecay(max_weight=1000, flatness_param=1),
+        aggregation="mean",
+    )
+    expected = np.average(
+        [543, 821, 806, 585],
+        weights=[
+            np.exp(-1 * 947.10 / 1000),
+            np.exp(-1 * 148.65 / 1000),
+            np.exp(-1 * 856.11 / 1000),
+            np.exp(-1 * 226.53 / 1000),
+        ],
+    )
+    assert round(nodes["average price/sqft"].loc[test_osm_id], 4) == round(expected, 4)
+
+    nodes["average price/sqft"] = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.ExponentialDecay(max_weight=1000, flatness_param=2),
+        aggregation="mean",
+    )
+    expected = np.average(
+        [543, 821, 806, 585],
+        weights=[
+            np.exp(-1 * 947.10 / 1000 * 2),
+            np.exp(-1 * 148.65 / 1000 * 2),
+            np.exp(-1 * 856.11 / 1000 * 2),
+            np.exp(-1 * 226.53 / 1000 * 2),
+        ],
+    )
+    assert round(nodes["average price/sqft"].loc[test_osm_id], 4) == round(expected, 4)
