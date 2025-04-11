@@ -12,21 +12,50 @@ class PandanaNetwork:
     nodes: gpd.GeoDataFrame | pd.DataFrame
     min_weights_df: pd.DataFrame = None
     cutoff: float = None
+    from_nodes_col: str
+    to_nodes_col: str
+    edge_costs_col: str
 
     def __init__(
         self,
         edges: gpd.GeoDataFrame | pd.DataFrame,
         nodes: gpd.GeoDataFrame | pd.DataFrame,
+        from_nodes_col: str = "u",
+        to_nodes_col: str = "v",
+        edge_costs_col: str = "length",
     ):
+        """
+
+        :param edges:
+        :param nodes:
+        :param from_nodes_col: The name of the "from" nodes column (e.g. osmnx uses "u")
+        :param to_nodes_col: The name of the "from" nodes column (e.g. osmnx uses "v")
+        :param edge_costs_col: The name of the "from" nodes column (e.g. osmnx uses "distance")
+            for Euclidian distance, but any impedance (like travel time) could also be used here.
+        """
+        edges_columns = edges.reset_index().columns
+        if from_nodes_col not in edges_columns:
+            raise Exception(
+                f"from_nodes_col='{from_nodes_col}' not found in edges DataFrame"
+            )
+        if to_nodes_col not in edges_columns:
+            raise Exception(
+                f"to_nodes_col='{to_nodes_col}' not found in edges DataFrame"
+            )
+        if edge_costs_col not in edges_columns:
+            raise Exception(
+                f"edge_costs_col='{edge_costs_col}' not found in edges DataFrame"
+            )
+
         self.edges = edges
         self.nodes = nodes
+        self.from_nodes_col = from_nodes_col
+        self.to_nodes_col = to_nodes_col
+        self.edge_costs_col = edge_costs_col
 
     def preprocess(
         self,
         weight_cutoff: float,
-        from_nodes_col: str = "u",
-        to_nodes_col: str = "v",
-        edge_costs_col: str = "length",
     ):
         """
         Convert the edges DataFrame (which represents the connections in a network), to a "minimum
@@ -36,24 +65,21 @@ class PandanaNetwork:
             networks and cutoffs it should be very fast.
         :param weight_cutoff: Don't investigate from-to pairs whose minimum path is larger than
             this cutoff.
-        :param from_nodes_col: The name of the "from" nodes column (e.g. osmnx uses "u")
-        :param to_nodes_col: The name of the "from" nodes column (e.g. osmnx uses "v")
-        :param edge_costs_col: The name of the "from" nodes column (e.g. osmnx uses "distance")
-            for Euclidian distance, but any impedance (like travel time) could also be used here.
         :return:
         """
         self.min_weights_df = dijkstra_all_pairs(
             self.edges.reset_index(),
             cutoff=weight_cutoff,
-            from_nodes_col=from_nodes_col,
-            to_nodes_col=to_nodes_col,
-            edge_costs_col=edge_costs_col,
+            from_nodes_col=self.from_nodes_col,
+            to_nodes_col=self.to_nodes_col,
+            edge_costs_col=self.edge_costs_col,
         )
         self.cutoff = weight_cutoff
 
     def nearest_nodes(self, values_gdf: gpd.GeoDataFrame) -> pd.Series:
         """
         Map each point in values_gdf to its nearest node in nodes_gdf
+
         :param values_gdf: A GeoDataFrame (usually points) with columns for values (e.g. a
             GeoDataFrame of amenity locations, or population or jobs
         :return: A series with the same index as values_gdf with values that come from the
@@ -63,9 +89,11 @@ class PandanaNetwork:
         joined_gdf = values_gdf.to_crs(epsg=3857).sjoin_nearest(
             self.nodes.to_crs(epsg=3857)
         )
+
         if "index_right" in joined_gdf.columns:
             # older versions of geopandas call it index_right
             return joined_gdf["index_right"]
+
         return joined_gdf[self.nodes.index.name]
 
     def aggregate(
@@ -145,13 +173,22 @@ class PandanaNetwork:
         self.edges.to_parquet(edges_filename)
 
     @staticmethod
-    def read(edges_filename: str, nodes_filename: str):
+    def read(
+        edges_filename: str,
+        nodes_filename: str,
+        from_nodes_col: str = "u",
+        to_nodes_col: str = "v",
+        edge_costs_col: str = "length",
+    ):
         """
         Read a PandanaNetwork from 2 parquet files
         """
         return PandanaNetwork(
             edges=gpd.read_parquet(edges_filename),
             nodes=gpd.read_parquet(nodes_filename),
+            from_nodes_col=from_nodes_col,
+            to_nodes_col=to_nodes_col,
+            edge_costs_col=edge_costs_col,
         )
 
     @staticmethod
