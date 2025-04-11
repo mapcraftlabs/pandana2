@@ -1,5 +1,9 @@
 # pandana2
 
+An example aggregating home values in Oakland.  This is an image - click [here](https://nbviewer.org/urls/gist.githubusercontent.com/fscottfoti/6dbdd18c3a065d5517dfd390004f1cf1/raw/21919407619889b984fd36201f1b089ac46e0f81/gistfile1.txt) and scroll to the bottom for an interative version.
+
+<img width="864" alt="Screenshot 2025-04-11 at 4 48 27 PM" src="https://github.com/user-attachments/assets/6bb7dc24-db92-4565-8eab-07c2e1edbd0a" />
+
 ### Motivating use case
 
 The motivating use case of this library is to perform a mean of home prices (or anything else) in cities using local street networks.  This solves two problems:
