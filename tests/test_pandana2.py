@@ -27,12 +27,15 @@ def simple_graph():
     simple_graph_reverse = simple_graph.rename(columns={"from": "to", "to": "from"})
     edges = pd.concat([simple_graph, simple_graph_reverse])
     nodes = pd.DataFrame(index=["a", "b", "c", "d", "e", "f"])
-    network = pandana2.PandanaNetwork(edges=edges, nodes=nodes)
-    network.preprocess(
-        weight_cutoff=1.2,
+    network = pandana2.PandanaNetwork(
+        edges=edges,
+        nodes=nodes,
         from_nodes_col="from",
         to_nodes_col="to",
         edge_costs_col="edge_cost",
+    )
+    network.preprocess(
+        weight_cutoff=1.2,
     )
     return network
 
@@ -133,8 +136,17 @@ def test_home_price_aggregation(redfin_df):
     ).write(edges_filename=edges_filename, nodes_filename=nodes_filename)
     """
 
+    with pytest.raises(Exception) as e:
+        pandana2.PandanaNetwork.read(
+            edges_filename=edges_filename,
+            nodes_filename=nodes_filename,
+            edge_costs_col="foobar",
+        )
+    assert "edge_costs_col='foobar' not found in edges DataFrame" in str(e)
+
     net = pandana2.PandanaNetwork.read(
-        edges_filename=edges_filename, nodes_filename=nodes_filename
+        edges_filename=edges_filename,
+        nodes_filename=nodes_filename,
     )
 
     redfin_df["node_id"] = net.nearest_nodes(redfin_df)
@@ -143,6 +155,22 @@ def test_home_price_aggregation(redfin_df):
     t0 = time.time()
     net.preprocess(weight_cutoff=1500)
     print("Finished dijkstra in {:.2f} seconds".format(time.time() - t0))
+
+    with pytest.raises(Exception) as e:
+        net.aggregate(
+            values=pd.Series(1, index=redfin_df["node_id"]),
+            decay_func=pandana2.NoDecay(2000),
+            aggregation="sum",
+        )
+    assert "Decay function has a max weight greater than the value" in str(e)
+
+    with pytest.raises(Exception) as e:
+        net.aggregate(
+            values=pd.Series(1, index=["does not exist"]),
+            decay_func=pandana2.NoDecay(500),
+            aggregation="sum",
+        )
+    assert "Values should have an index which maps to the nodes DataFrame" in str(e)
 
     t0 = time.time()
     nodes = net.nodes.copy()
