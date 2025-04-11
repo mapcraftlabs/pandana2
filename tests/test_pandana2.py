@@ -301,3 +301,20 @@ def test_home_price_aggregation(redfin_df):
         ],
     )
     assert round(nodes["average price/sqft"].loc[test_osm_id], 4) == round(expected, 4)
+
+    out_df = net.aggregate(
+        values=pd.Series(redfin_df["$/SQUARE FEET"].values, index=redfin_df["node_id"]),
+        decay_func=pandana2.LinearDecay(max_weight=1000),
+        aggregation={
+            "mean_price": "mean",
+            "median_price": "median",
+            "min_price": "min",
+            "max_price": "max",
+        },
+    )
+    assert out_df.loc[test_osm_id].round(2).to_dict() == {
+        "max_price": 821,
+        "mean_price": 711.53,
+        "median_price": 806,
+        "min_price": 543,
+    }
