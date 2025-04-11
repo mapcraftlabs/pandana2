@@ -2,9 +2,9 @@ import geopandas as gpd
 import osmnx
 import pandas as pd
 
-from pandana2.utils import Aggregation, do_single_aggregation
 from pandana2.decay_functions import PandanaDecayFunction
 from pandana2.dijkstra import dijkstra_all_pairs
+from pandana2.utils import Aggregation, do_single_aggregation
 
 
 class PandanaNetwork:
