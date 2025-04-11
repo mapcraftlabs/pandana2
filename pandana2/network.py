@@ -98,33 +98,42 @@ class PandanaNetwork:
         origin_node_id_col = "from"
         destination_node_id_col = "to"
         values_col = "values"
+        decayed_weights_col = "decayed_weights"
 
-        merged_df = self.min_weights_df.merge(
+        # for performance, we apply the max_weight filter first
+        filtered_weights = self.min_weights_df[
+            decay_func.mask(self.min_weights_df[weight_col])
+        ]
+
+        merged_df = filtered_weights.merge(
             pd.DataFrame({values_col: values}),
             how="inner",
             left_on=destination_node_id_col,
             right_index=True,
         )
 
-        merged_df["decayed_weights"] = decay_func.weights(merged_df[weight_col])
-        merged_df = merged_df[decay_func.mask(merged_df[weight_col])]
+        merged_df[decayed_weights_col] = decay_func.weights(merged_df[weight_col])
 
         if isinstance(aggregation, dict):
             # support multiple aggregation with one merge dataframe
-            return {
-                k: do_single_aggregation(
-                    merged_df=merged_df,
-                    values_col=values_col,
-                    origin_node_id_col=origin_node_id_col,
-                    aggregation=v,
-                )
-                for k, v in aggregation.items()
-            }
+            return pd.DataFrame(
+                {
+                    k: do_single_aggregation(
+                        merged_df=merged_df,
+                        values_col=values_col,
+                        origin_node_id_col=origin_node_id_col,
+                        decayed_weights_col=decayed_weights_col,
+                        aggregation=v,
+                    )
+                    for k, v in aggregation.items()
+                }
+            )
         else:
             return do_single_aggregation(
                 merged_df=merged_df,
                 values_col=values_col,
                 origin_node_id_col=origin_node_id_col,
+                decayed_weights_col=decayed_weights_col,
                 aggregation=aggregation,
             )
 

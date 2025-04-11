@@ -53,6 +53,7 @@ def do_single_aggregation(
     merged_df: pd.DataFrame,
     values_col: str,
     origin_node_id_col: str,
+    decayed_weights_col: str,
     aggregation: Aggregation,
 ):
     if aggregation in ["median", "std"]:
@@ -62,22 +63,25 @@ def do_single_aggregation(
         }[aggregation]
         return merged_df.groupby(origin_node_id_col).apply(
             lambda group: lambda_func(
-                group[values_col].values, weights=group["decayed_weights"].values
+                group[values_col].values, weights=group[decayed_weights_col].values
             ),
             include_groups=False,
         )
 
-    if aggregation not in ["min", "max"]:
+    if aggregation in ["min", "max"]:
         # do not every apply weights for min / max
-        merged_df[values_col] *= merged_df["decayed_weights"]
+        decayed_weights = 1
+    else:
+        decayed_weights = merged_df[decayed_weights_col]
+
+    def do_aggregation(values: pd.Series, _aggregation: Aggregation):
+        return values.groupby(merged_df[origin_node_id_col]).agg(_aggregation)
 
     if aggregation == "mean":
         # could do this with np.average, but it should be faster to do it with 2
         # sums than a .apply like the median below
-        ret_df = merged_df.groupby(origin_node_id_col).agg(
-            sum_of_values=(values_col, "sum"),
-            sum_of_weights=("decayed_weights", "sum"),
-        )
-        return ret_df.sum_of_values / ret_df.sum_of_weights
+        sum_of_values = do_aggregation(merged_df[values_col] * decayed_weights, "sum")
+        sum_of_weights = do_aggregation(decayed_weights, "sum")
+        return sum_of_values / sum_of_weights
 
-    return merged_df.groupby(origin_node_id_col)[values_col].agg(aggregation)
+    return do_aggregation(merged_df[values_col] * decayed_weights, aggregation)
