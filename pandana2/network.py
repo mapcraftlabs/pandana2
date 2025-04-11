@@ -215,9 +215,10 @@ class PandanaNetwork:
         """
         Use osmnx to grab local street network using settings appropriate for this library
         """
-        osmnx.settings.bidirectional_network_types = ["all"]
+        osmnx.settings.bidirectional_network_types = ["drive"]
         graph = osmnx.graph_from_place(
             place_query,
+            network_type="drive",
             custom_filter='["highway"~"residential|secondary|tertiary|secondary_link|tertiary_link|unclassified"]',
         )
         nodes, edges = osmnx.graph_to_gdfs(graph)
