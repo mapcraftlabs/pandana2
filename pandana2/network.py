@@ -11,7 +11,7 @@ class PandanaNetwork:
     edges: gpd.GeoDataFrame | pd.DataFrame
     nodes: gpd.GeoDataFrame | pd.DataFrame
     min_weights_df: pd.DataFrame = None
-    cutoff: float = None
+    weight_cutoff: float = None
     from_nodes_col: str
     to_nodes_col: str
     edge_costs_col: str
@@ -19,12 +19,17 @@ class PandanaNetwork:
     def __init__(
         self,
         edges: gpd.GeoDataFrame | pd.DataFrame,
-        nodes: gpd.GeoDataFrame | pd.DataFrame,
+        nodes: gpd.GeoDataFrame,
         from_nodes_col: str = "u",
         to_nodes_col: str = "v",
         edge_costs_col: str = "length",
     ):
         """
+        Pass a DataFrame of edges which is indexed with 'from' and 'to' nodes and has a column to
+            represent the edge weight.  The nodes DataFrame contains each of the unique 'from'
+            and 'to' node ids with an associated Geometry.  If you use osmnx, the 'from' and 'to'
+            columns will be called 'u' and 'v' respectively, and the default edge_costs_col will
+            be 'length'.
 
         :param edges:
         :param nodes:
@@ -46,6 +51,12 @@ class PandanaNetwork:
             raise Exception(
                 f"edge_costs_col='{edge_costs_col}' not found in edges DataFrame"
             )
+        assert (
+            edges.reset_index()[from_nodes_col].isin(nodes.index).all()
+        ), "All 'from' node ids should be in the node DataFrame"
+        assert (
+            edges.reset_index()[to_nodes_col].isin(nodes.index).all()
+        ), "All 'to' node ids should be in the node DataFrame"
 
         self.edges = edges
         self.nodes = nodes
@@ -74,7 +85,7 @@ class PandanaNetwork:
             to_nodes_col=self.to_nodes_col,
             edge_costs_col=self.edge_costs_col,
         )
-        self.cutoff = weight_cutoff
+        self.weight_cutoff = weight_cutoff
 
     def nearest_nodes(self, values_gdf: gpd.GeoDataFrame) -> pd.Series:
         """
@@ -122,11 +133,19 @@ class PandanaNetwork:
             self.nodes.index
         ).all(), "Values should have an index which maps to the nodes DataFrame"
 
+        # these column names are returned by the dijkstra function
         weight_col = "weight"
         origin_node_id_col = "from"
         destination_node_id_col = "to"
+
+        # these column names are just internal to this function
         values_col = "values"
         decayed_weights_col = "decayed_weights"
+
+        if decay_func.max_weight > self.weight_cutoff:
+            raise Exception(
+                "Decay function has a max weight greater than the value passed to preprocess"
+            )
 
         # for performance, we apply the max_weight filter first
         filtered_weights = self.min_weights_df[
@@ -194,7 +213,7 @@ class PandanaNetwork:
     @staticmethod
     def from_osmnx_local_streets_from_place_query(place_query: str):
         """
-        Use osmnx to grab local street network using settings appropriate for pandana2
+        Use osmnx to grab local street network using settings appropriate for this library
         """
         osmnx.settings.bidirectional_network_types = ["all"]
         graph = osmnx.graph_from_place(

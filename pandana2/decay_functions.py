@@ -5,8 +5,21 @@ import pandas as pd
 
 
 class PandanaDecayFunction:
+    """
+    A Pandana Decay Function class
+    :param mask: is used to filter rows for an aggregation, which can be useful for
+        aggregations and medians such that not all elements are even considered in
+        the metric
+    :param weights: a floating point weight to take a Series of edge weights and create
+        a Series of weights to apply to a weighted aggregation (weighted sum, weighted
+        mean, etc.)  For instance, observations at the origin could start with a weight
+        of 1.0 and linearly decrease to 0.0 at the max_weight, but the choice of decay
+        is up to the user.
+    """
+
     mask: Callable[[pd.Series], pd.Series]
     weights: Callable[[pd.Series], pd.Series]
+    max_weight: float
 
 
 class NoDecay(PandanaDecayFunction):
@@ -20,6 +33,7 @@ class NoDecay(PandanaDecayFunction):
     """
 
     def __init__(self, max_weight: float):
+        self.max_weight = max_weight
         self.mask = lambda weights: weights < max_weight
         self.weights = lambda weights: pd.Series(1, index=weights.index)
 
@@ -36,6 +50,7 @@ class LinearDecay(PandanaDecayFunction):
     """
 
     def __init__(self, max_weight: float):
+        self.max_weight = max_weight
         self.mask = lambda weights: weights < max_weight
         self.weights = lambda weights: (max_weight - weights) / max_weight
 
@@ -62,6 +77,7 @@ class ExponentialDecay(PandanaDecayFunction):
             it will decay to only 0.61, and at 2 it will decay to .13.  See the formula
             in the code.
         """
+        self.max_weight = max_weight
         self.mask = lambda weights: weights < max_weight
         self.weights = lambda weights: np.exp(
             -1 * (weights / max_weight) * flatness_param
