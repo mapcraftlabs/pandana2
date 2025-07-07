@@ -131,7 +131,7 @@ def test_home_price_aggregation(redfin_df):
 
     """
     # uncomment to refresh the test data
-    pandana2.PandanaNetwork.from_osmnx_local_streets_from_place_query(
+    pandana2.PandanaNetwork.from_osmnx_local_streets_place_query(
         "Oakland, CA"
     ).write(edges_filename=edges_filename, nodes_filename=nodes_filename)
     """

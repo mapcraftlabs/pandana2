@@ -211,7 +211,7 @@ class PandanaNetwork:
         )
 
     @staticmethod
-    def from_osmnx_local_streets_from_place_query(place_query: str):
+    def from_osmnx_local_streets_place_query(place_query: str):
         """
         Use osmnx to grab local street network using settings appropriate for this library
         """
