@@ -1,0 +1,23 @@
+[project]
+name = "pandana2"
+version = "0.0.1"
+authors = [
+  { name="Fletcher Foti", email="ffoti@mapcraft.io" },
+]
+description = "Weighted aggregations along the local street network"
+readme = "README.md"
+requires-python = ">=3.09"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/mapcraftlabs/pandana2"
+Issues = "https://github.com/mapcraftlabs/pandana2/issues"
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
