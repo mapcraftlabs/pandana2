@@ -18,5 +18,5 @@ Homepage = "https://github.com/mapcraftlabs/pandana2"
 Issues = "https://github.com/mapcraftlabs/pandana2/issues"
 
 [build-system]
-requires = ["setuptools >= 77.0.3"]
+requires = ["setuptools >= 80.9.0"]
 build-backend = "setuptools.build_meta"
