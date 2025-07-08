@@ -12,7 +12,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 license = "MIT"
-license-files = ["LICEN[CS]E*"]
+license-files = ["LICENSE"]
 
 [project.urls]
 Homepage = "https://github.com/mapcraftlabs/pandana2"
